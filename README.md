@@ -112,8 +112,10 @@ by changing the adapter.
 
 ## Reference implementation
 
-[AIDA](https://github.com/edudanielv/aida) — an empathic AI assistant for elderly users —
-is built on SETT and serves as the primary reference implementation of the framework.
+A full reference implementation built on SETT is currently in development.
+It will be published here when ready and will demonstrate the framework
+in a real-world application covering health monitoring, empathic interaction,
+schedule management, and emergency response.
 
 ## License
 
