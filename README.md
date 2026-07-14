@@ -8,7 +8,7 @@ A multi-agent AI development framework inspired by the
 SETT applies Badger's philosophy of coordinated expert agents at a **macro scale**:
 pre-designed, domain-specialized agents working under a single orchestrator,
 each maintaining independent memory, communicating only final results through
-a shared universal memory layer — with an ethical governance layer intercepting
+a shared universal memory layer, with an ethical governance layer intercepting
 every action before execution.
 
 > 📄 **Read the paper:**
@@ -97,16 +97,16 @@ print(result)
 
 ## Four principles of SETT
 
-**1. Pre-designed experts** — Experts know their domain before the system runs.
+**1. Pre-designed experts** Experts know their domain before the system runs.
 They are not trained on the fly; they are built with purpose.
 
-**2. Independent memory per agent** — Each agent has private memory invisible
+**2. Independent memory per agent** Each agent has private memory invisible
 to the orchestrator and other agents. Only final results are shared.
 
-**3. Communication by events** — Agents don't call each other directly.
+**3. Communication by events** Agents don't call each other directly.
 They publish to universal memory. The orchestrator synthesizes.
 
-**4. LLM as engine, not architecture** — The language model is a tool inside
+**4. LLM as engine, not architecture** The language model is a tool inside
 an expert, not the system itself. Swap Claude for GPT or any local model
 by changing the adapter.
 
@@ -119,7 +119,6 @@ schedule management, and emergency response.
 
 ## License
 
-MIT — Eduardo Daniel Viñales
+MIT: Eduardo Daniel Viñales
 
-Inspired by: [BADGER: Learning to (Learn [Learning Algorithms] through Multi-Agent Communication)](https://arxiv.org/pdf/1912.01513)
-— Marek Rosa et al., GoodAI, 2019
+Inspired by: [BADGER: Learning to (Learn [Learning Algorithms] through Multi-Agent Communication)](https://arxiv.org/pdf/1912.01513) Marek Rosa et al., GoodAI, 2019
