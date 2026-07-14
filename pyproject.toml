@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sett-framework"
+version = "0.1.0"
+description = "Scalable Expert-based Task Topology — A multi-agent AI development framework"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Eduardo Daniel Viñales" }
+]
+keywords = [
+    "multi-agent", "AI", "framework", "SETT",
+    "orchestrator", "LLM", "ethical-AI", "Badger"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = []  # Core framework has zero mandatory dependencies
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40.0"]
+openai    = ["openai>=1.40.0"]
+gemini    = ["google-generativeai>=0.8.0"]
+all       = [
+    "anthropic>=0.40.0",
+    "openai>=1.40.0",
+    "google-generativeai>=0.8.0",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage   = "https://github.com/edudanielv/sett-framework"
+Paper-EN   = "https://doi.org/10.5281/zenodo.21287133"
+Paper-ES   = "https://doi.org/10.5281/zenodo.21287355"
+Paper-JP   = "https://doi.org/10.5281/zenodo.21301700"
+LinkedIn   = "https://www.linkedin.com/in/edudanielv/"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sett*"]
