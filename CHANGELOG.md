@@ -2,6 +2,22 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.2.1] — 2026-07-14
+
+### Fixed
+- `README.md` Quick Start example was still showing the pre-Executor
+  code from v0.1.x — it never used `SETTExecutor`/`Action`, so it did
+  not reflect the "Actions as Data" pattern shipped in v0.2.0. Updated
+  to the verified, working example using `submit_action()`.
+- Minor README improvements: badges, a short "Why SETT?" section, a
+  "Key features" checklist, corrected license formatting, and
+  `ContextAnalyzer`'s description now says "biometric" instead of the
+  broader (and less accurate) "biological".
+
+### Notes
+- No code changes in this release — `sett/` is identical to v0.2.0.
+  Only `README.md` and `pyproject.toml` (keywords) were updated.
+
 ## [0.2.0] — 2026-07-14
 
 ### Added

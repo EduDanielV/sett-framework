@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sett-framework"
-version = "0.2.0"
+version = "0.2.1"
 description = "Scalable Expert-based Task Topology — A multi-agent AI development framework"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -13,7 +13,8 @@ authors = [
 ]
 keywords = [
     "multi-agent", "AI", "framework", "SETT",
-    "orchestrator", "LLM", "ethical-AI", "Badger"
+    "orchestrator", "LLM", "ethical-AI", "Badger",
+    "executor", "actions-as-data"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
