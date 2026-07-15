@@ -192,6 +192,14 @@ class ContextAnalyzer:
         """
         Determines if a human is in immediate risk.
         Combines score threshold, biometrics, RiskProfile, and EnvironmentalContext.
+
+        v0.1.1 fix: biometric data can arrive nested under a "health" key
+        (context={"health": {"heart_rate_bpm": ...}}) OR flat at the top
+        level of context (context={"heart_rate_bpm": ...}), depending on
+        how the calling agent structures its published result. Previously
+        only the nested form was checked, so an agent publishing flat keys
+        (as the multi_agent.py example does) never triggered this check.
+        Both structures are now checked.
         """
         from sett.risk_ruler.risk_level import RiskLevel
 
@@ -199,9 +207,14 @@ class ContextAnalyzer:
         if risk_score >= 7.0:
             return True
 
-        # Biometric indicators (only if data is actually present)
+        # Biometric indicators (only if data is actually present).
+        # Prefer a nested "health" dict if present; otherwise fall back
+        # to reading the same keys directly from the top-level context.
         health_data = context.get("health", {})
-        if isinstance(health_data, dict) and health_data:
+        if not (isinstance(health_data, dict) and health_data):
+            health_data = context
+
+        if isinstance(health_data, dict):
             heart_rate = health_data.get("heart_rate_bpm")
             temperature = health_data.get("temperature_celsius")
             if heart_rate is not None and (heart_rate > 150 or heart_rate < 40):

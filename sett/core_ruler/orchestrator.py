@@ -57,6 +57,7 @@ class SETTOrchestrator:
         self._agents: dict[str, SETTAgent] = {}
         self._universal_memory = UniversalMemory()
         self._ethical_filter = ethical_filter or EthicalFilter()
+        self._executor = None  # SETTExecutor | None — set via register_executor()
 
         # Connect the ethical filter to universal memory
         # Every write to universal memory will pass through it
@@ -65,17 +66,39 @@ class SETTOrchestrator:
     def register_agent(self, agent: SETTAgent) -> None:
         """
         Register an agent with the orchestrator.
-        Connects the agent to universal memory.
+        Connects the agent to universal memory, and to the Executor if
+        one has already been registered (order-independent: if the
+        Executor is registered later via register_executor(), it is
+        retroactively attached to every agent registered so far).
 
         Args:
             agent: A SETTAgent instance. Its domain must be unique.
         """
         agent.attach_universal_memory(self._universal_memory)
+        if self._executor is not None:
+            agent.attach_executor(self._executor)
         self._agents[agent.domain] = agent
         logger.info(
             "[Orchestrator] Agent registered: '%s' (domain: '%s')",
             agent.name, agent.domain
         )
+
+    def register_executor(self, executor) -> None:
+        """
+        Register a SETTExecutor with this orchestrator. Gives it access
+        to universal memory (so it can evaluate actions through the
+        EthicalFilter and read EnvironmentalContext), and attaches it to
+        every agent already registered — as well as to any agent
+        registered afterward, automatically.
+
+        Args:
+            executor: A SETTExecutor instance.
+        """
+        self._executor = executor
+        executor.attach_universal_memory(self._universal_memory)
+        for agent in self._agents.values():
+            agent.attach_executor(executor)
+        logger.info("[Orchestrator] Executor registered.")
 
     def get_agent(self, domain: str) -> SETTAgent:
         """
@@ -99,6 +122,7 @@ class SETTOrchestrator:
         input_data: dict[str, Any],
         domain: str | None = None,
         emotional_state: str = "unknown",
+        location_id: str = "global",
     ) -> dict[str, Any]:
         """
         Process an input through the system.
@@ -106,29 +130,42 @@ class SETTOrchestrator:
         If domain is specified, routes directly to that agent.
         If no domain is given, broadcasts to all agents and collects results.
 
+        v0.1.1 fix: emotional_state and location_id are now actually
+        propagated to the agent (and from there, automatically, to the
+        EthicalFilter via _publish_to_universal()). Previously
+        emotional_state was accepted here but silently dropped before
+        reaching agent.process() — every real evaluation ran with
+        emotional_state="unknown" regardless of what was passed in.
+
         Args:
             input_data: The data to process.
             domain: Optional domain to route to a specific agent.
             emotional_state: The detected emotional state of the user.
                              When integrated with the Sentiment Analyzer agent,
                              this is passed automatically to the EthicalFilter.
+            location_id: The shared space this interaction happens in.
+                         Used to look up the EnvironmentalContext (Layer 3)
+                         for this location. Defaults to "global".
 
         Returns:
             The result from the agent (or a dict of results from all agents).
         """
         if domain:
-            return self._route_to_agent(domain, input_data, emotional_state)
+            return self._route_to_agent(domain, input_data, emotional_state, location_id)
         else:
-            return self._broadcast(input_data, emotional_state)
+            return self._broadcast(input_data, emotional_state, location_id)
 
     def _route_to_agent(
         self,
         domain: str,
         input_data: dict[str, Any],
         emotional_state: str,
+        location_id: str = "global",
     ) -> dict[str, Any]:
         """Route input to a specific agent."""
         agent = self.get_agent(domain)
+        agent._current_emotional_state = emotional_state
+        agent._current_location_id = location_id
         try:
             logger.debug(
                 "[Orchestrator] Routing to agent '%s' (domain: '%s')",
@@ -147,6 +184,7 @@ class SETTOrchestrator:
         self,
         input_data: dict[str, Any],
         emotional_state: str,
+        location_id: str = "global",
     ) -> dict[str, Any]:
         """
         Broadcast input to all registered agents and collect results.
@@ -154,6 +192,8 @@ class SETTOrchestrator:
         """
         results: dict[str, Any] = {}
         for domain, agent in self._agents.items():
+            agent._current_emotional_state = emotional_state
+            agent._current_location_id = location_id
             try:
                 results[domain] = agent.process(input_data)
             except SETTEthicalFilterRejectedError as e:

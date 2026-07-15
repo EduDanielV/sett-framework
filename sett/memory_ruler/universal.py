@@ -17,6 +17,7 @@ import threading
 if TYPE_CHECKING:
     from sett.ethics_ruler.ethic_kernel.filter import EthicalFilter
     from sett.risk_ruler.environmental_context import EnvironmentalContext
+    from sett.risk_ruler.risk_profile import RiskProfile
 
 # Reserved key prefix for environmental context entries
 _ENV_CONTEXT_PREFIX = "__env_ctx__"
@@ -52,15 +53,41 @@ class UniversalMemory:
 
     # ── Agent results ────────────────────────────────────────────────────────
 
-    def update(self, agent: str, result: dict[str, Any]) -> None:
+    def update(
+        self,
+        agent: str,
+        result: dict[str, Any],
+        emotional_state: str = "unknown",
+        risk_profile: "RiskProfile | None" = None,
+        environmental_context: "EnvironmentalContext | None" = None,
+    ) -> None:
         """
         Called by an agent to publish its final result.
         Passes through the EthicalFilter before being committed.
+
+        v0.1.1 fix: previously this only passed action="memory_write" and
+        a context wrapped as {"agent": agent, "result": result} — so (a)
+        emotional_state/risk_profile/environmental_context never reached
+        the filter in the real flow (they silently defaulted every time),
+        and (b) detectors that read biometric data expected keys directly
+        in `context` but received them nested one level deeper under
+        "result" instead, so they never matched.
+
+        Now the published result's keys are spread directly into the
+        context passed to the filter (so both flat and "health"-nested
+        detectors can find them), and all three risk layers are forwarded.
+        The publishing agent's domain is still available, namespaced as
+        "_source_agent" to avoid colliding with the agent's own data.
         """
         if self._ethical_filter is not None:
+            context = dict(result)
+            context["_source_agent"] = agent
             self._ethical_filter.evaluate(
                 action="memory_write",
-                context={"agent": agent, "result": result},
+                context=context,
+                emotional_state=emotional_state,
+                risk_profile=risk_profile,
+                environmental_context=environmental_context,
             )
 
         with self._lock:
@@ -70,6 +97,34 @@ class UniversalMemory:
                 "agent": agent,
                 "action": "update",
             })
+
+    def evaluate_action(
+        self,
+        action: str,
+        context: dict[str, Any],
+        emotional_state: str = "unknown",
+        risk_profile: "RiskProfile | None" = None,
+        environmental_context: "EnvironmentalContext | None" = None,
+    ) -> None:
+        """
+        Evaluate a real-world side effect through the EthicalFilter BEFORE
+        it is executed — used by SETTAgent.propose_action() and by
+        SETTExecutor.submit(). Unlike update(), this does not write
+        anything to universal memory; it only runs the action through the
+        filter and lets a rejection propagate as
+        SETTEthicalFilterRejectedError.
+
+        If no EthicalFilter is configured, this is a no-op (fail-open),
+        matching the existing behavior of update() when no filter is set.
+        """
+        if self._ethical_filter is not None:
+            self._ethical_filter.evaluate(
+                action=action,
+                context=context,
+                emotional_state=emotional_state,
+                risk_profile=risk_profile,
+                environmental_context=environmental_context,
+            )
 
     def read(self, agent: str, default: Any = None) -> Any:
         """Read the latest published result from a specific agent."""

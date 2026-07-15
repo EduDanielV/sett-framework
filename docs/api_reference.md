@@ -148,9 +148,23 @@ Main processing method. Coordinate experts, use private memory for intermediate 
 
 ---
 
-`_publish_to_universal(result)` → `None`
+`_publish_to_universal(result, risk_profile=None)` → `None`
 
-Publish the agent's final result to universal memory. This is the only way an agent communicates outward. The result passes through the EthicalFilter before being stored. Call this at the end of `process()`.
+Publish the agent's final result to universal memory. This is the only way an agent communicates outward. The result passes through the EthicalFilter before being stored — `emotional_state` and the `EnvironmentalContext` for the agent's current location are forwarded automatically. Call this at the end of `process()`.
+
+Note: this only evaluates a result AFTER it exists. It does not gate real-world side effects (sending a message, calling an API) that may have already happened inside `resolve()`/`process()`. For that, use `propose_action()` or `submit_action()` below.
+
+---
+
+`propose_action(action, action_context=None, risk_profile=None)` → `None`
+
+Gate a real-world side effect through the `EthicalFilter` **before** it is executed — call this from inside `resolve()`/`process()`, before performing the effect yourself. Lightweight and opt-in: the developer must remember to call it. Raises `SETTEthicalFilterRejectedError` if blocked; the side effect must not be performed in that case.
+
+---
+
+`submit_action(action_type, payload=None, risk_profile=None)` → `Any`
+
+Structural alternative to `propose_action()`: describes the effect as an `Action` and submits it to the `SETTExecutor` registered with this orchestrator (see the `Action` / `SETTExecutor` section below). The agent never holds a reference to the real client — only the Executor's registered handler does, and only if the `EthicalFilter` approves. Raises `SETTConfigurationError` if no `Executor` (or no handler for this `action_type`) is registered.
 
 ---
 
@@ -517,6 +531,72 @@ ContextAnalyzer()
 `analyze(action, context, emotional_state="unknown", risk_profile=None, environmental_context=None)` → `ContextAnalysis`
 
 Performs the full three-layer analysis and returns a `ContextAnalysis` with `risk_score`, `emotional_state`, `human_at_risk`, `reasoning`, `consequences`, and `risk_level`.
+
+---
+
+## core_ruler — Action and SETTExecutor (v0.2.0)
+
+### Action
+
+A proposed real-world side effect, described as data rather than code.
+
+```python
+Action(action_type, payload={}, proposed_by="unknown")
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `action_type` | `str` | Must match a handler registered on the `SETTExecutor` (e.g. `"send_sms"`). |
+| `payload` | `dict` | Data the handler needs to perform the effect. |
+| `proposed_by` | `str` | Domain of the agent that proposed this action. Audit only. |
+
+---
+
+### SETTExecutor
+
+The only component allowed to perform real side effects. Receives `Action`s,
+evaluates them through the `EthicalFilter`, and executes the registered
+handler only if approved.
+
+```python
+SETTExecutor()
+```
+
+**Methods**
+
+| Method | Returns | Description |
+|---|---|---|
+| `register_handler(action_type, handler)` | `None` | Registers the function that performs a given action type. This is the only code allowed to run that side effect. |
+| `submit(action, emotional_state="unknown", risk_profile=None, location_id="global")` | `Any` | Evaluates the action; if approved, calls the registered handler and returns its result. |
+| `get_audit_log()` | `list[dict]` | Actions that were actually approved and executed. Rejected or unhandled actions never appear here. |
+| `registered_action_types` *(property)* | `list[str]` | Action types with a handler currently registered. |
+
+Raises `SETTEthicalFilterRejectedError` if the `EthicalFilter` blocks the
+action (handler never runs), or `SETTConfigurationError` if no handler is
+registered for that `action_type` (fails closed, not open).
+
+---
+
+### SETTAgent.submit_action() — using the Executor from an agent
+
+```python
+agent.submit_action(action_type, payload=None, risk_profile=None)
+```
+
+Describes an `Action` and submits it to the `SETTExecutor` registered with
+this agent's orchestrator (via `orchestrator.register_executor(executor)`).
+Requires both an `Executor` and a handler for that `action_type` to be
+registered — otherwise raises `SETTConfigurationError`.
+
+This is the structural alternative to `propose_action()`: the agent never
+holds a reference to the real client (SMS provider, payment API, etc.),
+so there is no "forgot to call the gate" failure mode.
+
+```python
+class NotificationAgent(SETTAgent):
+    def process(self, input_data):
+        return self.submit_action("send_sms", payload={"to": ..., "message": ...})
+```
 
 ---
 
