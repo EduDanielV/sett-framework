@@ -668,6 +668,24 @@ API key is read from the `GOOGLE_API_KEY` environment variable if `api_key` is n
 
 ---
 
+### OllamaAdapter
+
+LLM adapter for locally-running models via [Ollama](https://ollama.com). No API key, no cloud, no cost — inference happens entirely on your own machine.
+
+```python
+from sett.services_llm.ollama import OllamaAdapter
+
+OllamaAdapter(model="qwen3:1.7b", base_url="http://localhost:11434", temperature=0.75, timeout_seconds=30)
+```
+
+Unlike the other three adapters, `OllamaAdapter` requires **no extra pip install** — it talks to Ollama's local REST API using only the Python standard library. You only need Ollama itself installed and running, with the target model already pulled (`ollama pull qwen3:1.7b`).
+
+Recommended low-resource models: `qwen3:1.7b` (lightest, ~4GB RAM) or `phi4-mini` (3.8B, MIT license, built for CPU-only machines).
+
+Raises `SETTLLMAdapterError` if Ollama isn't reachable at `base_url`, times out, or returns an unparseable response.
+
+---
+
 ## Exceptions
 
 All SETT exceptions inherit from `SETTError`.

@@ -134,6 +134,8 @@ for entry in orchestrator.get_ethical_audit_log():
 | I want to… | Go to… |
 |---|---|
 | Understand the architecture and philosophy | [`docs/concepts.md`](concepts.md) |
+| Create my own agent from a blank, working starting point | [`templates/`](../templates/) |
 | See a multi-agent system with health, schedule, and environment agents | [`examples/multi_agent.py`](../examples/multi_agent.py) |
 | See the EthicalFilter in action with ALLOW / WARN / REJECT scenarios | [`examples/with_ethics.py`](../examples/with_ethics.py) |
+| See the "actions as data" Executor pattern | [`examples/with_executor.py`](../examples/with_executor.py) |
 | Look up every public class and method | [`docs/api_reference.md`](api_reference.md) |

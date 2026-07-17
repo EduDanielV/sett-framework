@@ -2,6 +2,50 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.3.0] — 2026-07-16
+
+### Added
+- `CONTRIBUTING.md` — welcoming guide for issues and pull requests.
+  Explicitly invites contributions in English, Español, or 日本語.
+  Honest about what doesn't exist yet (no Discord/chat server, no
+  translated docs) rather than implying infrastructure that isn't there.
+- `sett/services_llm/ollama.py` — `OllamaAdapter`, for free, local,
+  offline LLM inference via [Ollama](https://ollama.com). Unlike the
+  cloud adapters, it requires **no extra pip dependency** — talks to
+  Ollama's local REST API using only the Python standard library
+  (`urllib`). Recommended low-resource models: `qwen3:1.7b` (lightest)
+  or `phi4-mini` (MIT license, built for CPU-only machines). 17 new
+  tests (HTTP mocked — Ollama itself is an external local service, not
+  something a test environment can assume is installed).
+- `templates/` — blank, copy-and-fill `agent_template.py` and
+  `expert_template.py`. Both are real, runnable code as-is (verified:
+  they instantiate, register, and process an empty result without
+  errors before any customization) — not pseudocode. `agent_template.py`
+  documents the three valid ways to close `process()`
+  (`_publish_to_universal`, `propose_action`, `submit_action` +
+  Executor) as commented, mutually-exclusive options.
+- `docs/getting_started.md` and `docs/api_reference.md` updated for
+  both of the above; README notes `OllamaAdapter` needs no extra
+  install.
+
+### Fixed
+- README intro and Key Features wording overclaimed what the
+  EthicalFilter intercepts — it said "every action," which read as
+  "every line inside an expert's `resolve()`." Corrected to say what
+  is actually true: every action submitted as an `Action`
+  (`propose_action`/`submit_action`) and every write to universal
+  memory, before either takes effect.
+- README Quick Start had dropped the `get_ethical_audit_log()`
+  demonstration at some point — the part that makes the governance
+  story tangible instead of just claimed. Re-added; verified the
+  exact code block in the README produces the two audit log lines
+  shown (`memory_write` from `_publish_to_universal`, and
+  `send_notification` from `submit_action`).
+
+### Status
+126 tests passing (109 previous + 17 for OllamaAdapter). No breaking
+changes to any existing public API.
+
 ## [0.2.1] — 2026-07-14
 
 ### Fixed

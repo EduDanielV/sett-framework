@@ -14,7 +14,9 @@ Inspired by the [Badger Architecture](https://arxiv.org/pdf/1912.01513)
 agents at a **macro scale**: pre-designed, domain-specialized agents working
 under a single orchestrator, each maintaining independent memory,
 communicating only final results through a shared universal memory layer —
-with an ethical governance layer intercepting every action before execution.
+with an ethical governance layer intercepting every action submitted as an
+Action (via `propose_action`/`submit_action`) and every write to universal
+memory, before either one takes effect.
 
 > 📄 **Read the paper:**
 > [English](https://doi.org/10.5281/zenodo.21287133) ·
@@ -49,6 +51,10 @@ pip install sett-framework[anthropic]   # Claude
 pip install sett-framework[openai]      # GPT
 pip install sett-framework[all]         # All adapters
 ```
+
+> 💡 Want a free, offline, local LLM instead? `OllamaAdapter` needs no
+> extra `pip install` at all — just [Ollama](https://ollama.com) itself
+> running on your machine. See `docs/api_reference.md`.
 
 ## Quick start
 
@@ -97,6 +103,13 @@ result = orchestrator.process({"input": "hello"}, domain="my_domain")
 print(result)
 # Real-world side effect executed: Processed: hello
 # {'answer': 'Processed: hello', 'delivered': True}
+
+# 6. Every decision the EthicalFilter makes is logged — nothing happens
+#    silently, whether it was allowed, warned, or rejected.
+for entry in orchestrator.get_ethical_audit_log():
+    print(f"[{entry['verdict'].upper()}] {entry['action']} — score: {entry['harm_score']:.2f}")
+# [ALLOW] memory_write — score: 0.50
+# [ALLOW] send_notification — score: 1.50
 ```
 
 ## Key features
@@ -105,7 +118,7 @@ print(result)
 - ✔ Independent private memory per agent
 - ✔ Universal shared memory for final results only
 - ✔ Actions as Data execution model
-- ✔ Ethical governance layer intercepting every action
+- ✔ Ethical governance layer intercepting submitted actions and memory writes
 - ✔ Fail-closed execution — no handler, no Executor, no approval → nothing runs
 - ✔ Swappable LLM adapters (Claude, GPT, Gemini)
 
@@ -141,8 +154,6 @@ by changing the adapter.
 ## SETT Architecture
 
 ```
-**Agent coordination & memory:**
-
 ┌─────────────────────────────────────────────────────┐
 │                   SETTOrchestrator                  │
 │  ┌───────────────────────────────────────────────┐  │
@@ -161,8 +172,6 @@ by changing the adapter.
 └─────────────────────────────────────────────────────┘
 ```
 
-**Action execution (submit_action):**
-
 Real-world side effects (`submit_action`) follow a separate, fail-closed path:
 
 ```
@@ -178,10 +187,15 @@ It will be published here when ready and will demonstrate the framework
 in a real-world application covering health monitoring, empathic interaction,
 schedule management, and emergency response.
 
+## Contributing
+
+This is an independent, solo project — issues, ideas, and pull requests
+are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## License
 
 MIT License
 
 Copyright (c) 2026 Eduardo Daniel Viñales
 
-Academic inspiration: [BADGER: Learning to (Learn [Learning Algorithms] through Multi-Agent Communication)](https://arxiv.org/pdf/1912.01513) — Marek Rosa et al., GoodAI, 2019
+Academic inspiration: [BADGER: Learning to (Learn [Learning Algorithms] through Multi-Agent Communication)](https://arxiv.org/pdf/1912.01513) - Marek Rosa et al., GoodAI, 2019
