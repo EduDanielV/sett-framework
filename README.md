@@ -155,19 +155,19 @@ by changing the adapter.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   SETTOrchestrator                  │
+│                   SETTOrchestrator                   │
 │  ┌───────────────────────────────────────────────┐  │
-│  │              EthicalFilter (ring)             │  │
+│  │              EthicalFilter (ring)              │  │
 │  └───────────────────────────────────────────────┘  │
 │  ┌──────────┐  ┌──────────┐  ┌───────────────────┐  │
 │  │  Agent A │  │  Agent B │  │     Agent C       │  │
-│  │ Expert 1 │  │ Expert 1 │  │    Expert 1       │  │
-│  │ Expert 2 │  │ Expert 2 │  │    Expert 2       │  │
-│  │[private] │  │[private] │  │   [private]       │  │
+│  │ Expert 1 │  │ Expert 1 │  │ Expert 1          │  │
+│  │ Expert 2 │  │ Expert 2 │  │ Expert 2          │  │
+│  │[private] │  │[private] │  │[private]          │  │
 │  └────┬─────┘  └────┬─────┘  └────────┬──────────┘  │
-│       │             │                 │             │
-│  ┌────▼─────────────▼─────────────────▼──────────┐  │
-│  │               UniversalMemory                 │  │
+│       │             │                  │             │
+│  ┌────▼─────────────▼──────────────────▼──────────┐ │
+│  │               UniversalMemory                   │ │
 │  └───────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
@@ -198,4 +198,4 @@ MIT License
 
 Copyright (c) 2026 Eduardo Daniel Viñales
 
-Academic inspiration: [BADGER: Learning to (Learn [Learning Algorithms] through Multi-Agent Communication)](https://arxiv.org/pdf/1912.01513) - Marek Rosa et al., GoodAI, 2019
+Academic inspiration: [BADGER: Learning to (Learn [Learning Algorithms] through Multi-Agent Communication)](https://arxiv.org/pdf/1912.01513) — Marek Rosa et al., GoodAI, 2019

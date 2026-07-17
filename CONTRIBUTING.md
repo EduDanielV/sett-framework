@@ -1,6 +1,6 @@
 # Contributing to SETT
 
-Thanks for considering contributing, this is an independent, solo
+Thanks for considering contributing — this is an independent, solo
 project, and any help is genuinely welcome, at any experience level.
 
 ## 🐛 Found a bug, or have an idea?
@@ -13,7 +13,7 @@ includes:
 - What you ran (the exact command or code snippet)
 - What you expected to happen
 - What actually happened (the full error/traceback, if there is one)
-- Your Python version and OS.
+- Your Python version and OS
 
 ## 🔧 Want to fix or improve something yourself?
 
@@ -23,7 +23,7 @@ includes:
 4. Open a Pull Request describing what changed and why
 
 If you're adding a new agent/expert pattern or touching `ethics_ruler`,
-a quick Issue first (before writing code) is a good idea, it's a
+a quick Issue first (before writing code) is a good idea — it's a
 young framework and some design decisions are still being settled.
 
 ## 🧩 New to the codebase?
@@ -42,7 +42,7 @@ whichever you're most comfortable writing in. I'll answer in kind.
 
 ## What this project is not (yet)
 
-There's no Discord or chat server, Issues are the place for now.
+There's no Discord or chat server — Issues are the place for now.
 There's no separate translated documentation yet either (this file and
 the README are in English only, for the moment). Both are likely to
 come later, once there's more to talk about.

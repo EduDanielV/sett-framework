@@ -2,6 +2,30 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.3.1] — 2026-07-17
+
+### Fixed
+- `templates/agent_template.py`, `templates/expert_template.py`, and
+  `templates/README.md` were mistakenly published with all comments,
+  docstrings, and TODOs in Spanish (Dan's own working language) while
+  the rest of the repository is in English. This was an oversight —
+  the working notes weren't translated back before publishing. All
+  three files are now in English; the code itself never changed (it
+  was already English throughout — class names, imports, logic).
+  Verified the templates still instantiate and run correctly after
+  translation.
+- Fixed a leftover Spanish word ("almacén scenario") inside otherwise
+  English comments in `sett/memory_ruler/universal.py`,
+  `sett/risk_ruler/environmental_context.py`, and `tests/test_ethics.py`
+  — now "warehouse scenario" throughout.
+- Translated Spanish test data strings in `tests/test_ollama_adapter.py`
+  (e.g. sample prompts like `"hola"`) to English for consistency. These
+  were arbitrary example values with no effect on test behavior.
+
+### Notes
+- No functional changes in this release — code logic, the public API,
+  and test coverage are identical to v0.3.0. 126 tests passing.
+
 ## [0.3.0] — 2026-07-16
 
 ### Added

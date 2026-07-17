@@ -55,39 +55,39 @@ class TestOllamaAdapterComplete:
 
     @patch("urllib.request.urlopen")
     def test_complete_returns_response_text(self, mock_urlopen):
-        mock_urlopen.return_value = _fake_response({"response": "Hola, soy AIDA."})
+        mock_urlopen.return_value = _fake_response({"response": "Hello, I am AIDA."})
         adapter = OllamaAdapter()
-        result = adapter.complete("Decí buen día")
-        assert result == "Hola, soy AIDA."
+        result = adapter.complete("Say good morning")
+        assert result == "Hello, I am AIDA."
 
     @patch("urllib.request.urlopen")
     def test_complete_sends_correct_endpoint_and_model(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response({"response": "ok"})
         adapter = OllamaAdapter(model="qwen3:1.7b")
-        adapter.complete("hola")
+        adapter.complete("hello")
 
         sent_request = mock_urlopen.call_args[0][0]
         assert sent_request.full_url == "http://localhost:11434/api/generate"
 
         sent_body = json.loads(sent_request.data.decode("utf-8"))
         assert sent_body["model"] == "qwen3:1.7b"
-        assert sent_body["prompt"] == "hola"
+        assert sent_body["prompt"] == "hello"
         assert sent_body["stream"] is False
 
     @patch("urllib.request.urlopen")
     def test_complete_includes_system_prompt_when_given(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response({"response": "ok"})
         adapter = OllamaAdapter()
-        adapter.complete("hola", system="Sos AIDA, una asistente cálida.")
+        adapter.complete("hello", system="You are AIDA, a warm assistant.")
 
         sent_body = json.loads(mock_urlopen.call_args[0][0].data.decode("utf-8"))
-        assert sent_body["system"] == "Sos AIDA, una asistente cálida."
+        assert sent_body["system"] == "You are AIDA, a warm assistant."
 
     @patch("urllib.request.urlopen")
     def test_complete_omits_system_key_when_not_given(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response({"response": "ok"})
         adapter = OllamaAdapter()
-        adapter.complete("hola")
+        adapter.complete("hello")
 
         sent_body = json.loads(mock_urlopen.call_args[0][0].data.decode("utf-8"))
         assert "system" not in sent_body
@@ -96,7 +96,7 @@ class TestOllamaAdapterComplete:
     def test_complete_missing_response_key_returns_empty_string(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response({})
         adapter = OllamaAdapter()
-        assert adapter.complete("hola") == ""
+        assert adapter.complete("hello") == ""
 
 
 class TestOllamaAdapterChat:
@@ -104,17 +104,17 @@ class TestOllamaAdapterChat:
     @patch("urllib.request.urlopen")
     def test_chat_returns_message_content(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response(
-            {"message": {"role": "assistant", "content": "Buen día, Dan."}}
+            {"message": {"role": "assistant", "content": "Good morning, Dan."}}
         )
         adapter = OllamaAdapter()
-        result = adapter.chat([{"role": "user", "content": "buenos dias"}])
-        assert result == "Buen día, Dan."
+        result = adapter.chat([{"role": "user", "content": "good morning"}])
+        assert result == "Good morning, Dan."
 
     @patch("urllib.request.urlopen")
     def test_chat_sends_correct_endpoint(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response({"message": {"content": "ok"}})
         adapter = OllamaAdapter()
-        adapter.chat([{"role": "user", "content": "hola"}])
+        adapter.chat([{"role": "user", "content": "hello"}])
 
         sent_request = mock_urlopen.call_args[0][0]
         assert sent_request.full_url == "http://localhost:11434/api/chat"
@@ -124,19 +124,19 @@ class TestOllamaAdapterChat:
         mock_urlopen.return_value = _fake_response({"message": {"content": "ok"}})
         adapter = OllamaAdapter()
         adapter.chat(
-            [{"role": "user", "content": "hola"}],
+            [{"role": "user", "content": "hello"}],
             system="Sos AIDA.",
         )
 
         sent_body = json.loads(mock_urlopen.call_args[0][0].data.decode("utf-8"))
         assert sent_body["messages"][0] == {"role": "system", "content": "Sos AIDA."}
-        assert sent_body["messages"][1] == {"role": "user", "content": "hola"}
+        assert sent_body["messages"][1] == {"role": "user", "content": "hello"}
 
     @patch("urllib.request.urlopen")
     def test_chat_without_system_does_not_prepend(self, mock_urlopen):
         mock_urlopen.return_value = _fake_response({"message": {"content": "ok"}})
         adapter = OllamaAdapter()
-        adapter.chat([{"role": "user", "content": "hola"}])
+        adapter.chat([{"role": "user", "content": "hello"}])
 
         sent_body = json.loads(mock_urlopen.call_args[0][0].data.decode("utf-8"))
         assert len(sent_body["messages"]) == 1
@@ -150,7 +150,7 @@ class TestOllamaAdapterErrorHandling:
         mock_urlopen.side_effect = urllib.error.URLError("Connection refused")
         adapter = OllamaAdapter()
         with pytest.raises(SETTLLMAdapterError) as exc_info:
-            adapter.complete("hola")
+            adapter.complete("hello")
         assert "Ollama" in str(exc_info.value)
 
     @patch("urllib.request.urlopen")
@@ -163,7 +163,7 @@ class TestOllamaAdapterErrorHandling:
 
         adapter = OllamaAdapter()
         with pytest.raises(SETTLLMAdapterError):
-            adapter.complete("hola")
+            adapter.complete("hello")
 
     def test_error_does_not_leak_raw_urllib_exception_type(self):
         """
@@ -175,7 +175,7 @@ class TestOllamaAdapterErrorHandling:
             mock_urlopen.side_effect = urllib.error.URLError("down")
             adapter = OllamaAdapter()
             try:
-                adapter.complete("hola")
+                adapter.complete("hello")
                 assert False, "should have raised"
             except SETTLLMAdapterError:
                 pass

@@ -1,13 +1,13 @@
 """
 templates/expert_template.py
 ==============================
-Copiá este archivo, renombralo, y completá las tres partes marcadas con
-TODO. Un experto resuelve UNA sola tarea — si te encontrás queriendo
-hacer dos cosas distintas acá adentro, probablemente necesitás dos
-expertos, no uno más grande.
+Copy this file, rename it, and fill in the three parts marked TODO.
+An expert resolves ONE single task — if you find yourself wanting to
+do two different things in here, you probably need two experts, not
+one bigger one.
 
-No registres este experto en ningún lado vos mismo — eso lo hace el
-agente que lo contiene, con self.register_expert(...). Ver agent_template.py.
+Don't register this expert anywhere yourself — that's the job of the
+agent that owns it, via self.register_expert(...). See agent_template.py.
 """
 from __future__ import annotations
 from typing import Any
@@ -15,40 +15,40 @@ from typing import Any
 from sett import SETTExpert
 
 
-# TODO: renombrá la clase con el nombre de tu tarea específica
-# (ej: HeartRateExpert, WeatherLookupExpert, IntentClassifierExpert)
+# TODO: rename the class after your specific task
+# (e.g. HeartRateExpert, WeatherLookupExpert, IntentClassifierExpert)
 class MyExpert(SETTExpert):
     """
-    TODO: una línea describiendo QUÉ tarea puntual resuelve este experto.
-    Ejemplo: "Evalúa la frecuencia cardíaca contra rangos de referencia."
+    TODO: one line describing WHAT specific task this expert resolves.
+    Example: "Evaluates heart rate against reference ranges."
     """
 
     def resolve(self, context: dict[str, Any]) -> dict[str, Any]:
         """
-        Acá vive toda la lógica de este experto. Se llama siempre desde
-        el agente dueño, nunca directamente desde afuera.
+        All of this expert's logic lives here. Always called by its
+        owning agent — never directly from outside.
 
         Args:
-            context: los datos que el agente le pasó (input_data, u
-                     otro dict armado por el propio agente).
+            context: the data the agent passed in (input_data, or
+                     another dict the agent itself built).
 
         Returns:
-            Un dict con el resultado de este experto. El agente lo va
-            a combinar con el resultado de otros expertos, si tiene más.
+            A dict with this expert's result. The agent will combine
+            it with other experts' results, if it has more than one.
         """
 
-        # 1. TODO — leé lo que necesites de `context`
-        # valor = context.get("mi_dato_esperado")
+        # 1. TODO — read whatever you need from `context`
+        # value = context.get("my_expected_key")
 
-        # 2. TODO — hacé el cálculo/lógica puntual de este experto
-        # resultado = mi_logica(valor)
+        # 2. TODO — do this expert's specific calculation/logic
+        # result = my_logic(value)
 
-        # 3. (opcional) si otro experto de este mismo agente va a
-        #    necesitar este dato después, guardalo en memoria privada.
-        #    Nadie fuera de este agente puede leerla — ni el
-        #    orquestador, ni otros agentes.
+        # 3. (optional) if another expert in this same agent will need
+        #    this data later, write it to private memory. Nobody
+        #    outside this agent can read it — not the orchestrator,
+        #    not other agents.
         # if self._private_memory:
-        #     self._private_memory.write("mi_clave", resultado)
+        #     self._private_memory.write("my_key", result)
 
-        # 4. TODO — devolvé el resultado como dict
+        # 4. TODO — return the result as a dict
         return {}

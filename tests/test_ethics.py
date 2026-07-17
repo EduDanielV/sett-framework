@@ -414,7 +414,7 @@ class TestThreeLayerIntegration:
 
     def test_almacen_scenario(self):
         """
-        The 'almacén scenario': Instance A detects a critical risk,
+        The 'warehouse scenario': Instance A detects a critical risk,
         publishes EnvironmentalContext Level 4.
         Instance B reads it and its filter becomes more strict.
         """

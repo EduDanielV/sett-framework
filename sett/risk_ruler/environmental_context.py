@@ -7,7 +7,7 @@ An EnvironmentalContext is what a SETT instance publishes to a shared space
 when it detects that the environment around it requires attention.
 Other SETT instances in the same location can read this and adjust their behavior.
 
-This is the mechanism that enables the "almacén scenario":
+This is the mechanism that enables the "warehouse scenario":
     - AIDA instance A detects a user with elevated risk profile
     - A publishes EnvironmentalContext(level=LEVEL_4, location="store_42")
     - AIDA instances B, C, D in the same location read this

@@ -34,7 +34,7 @@ class UniversalMemory:
 
     2. Environmental context — published via publish_environmental_context(),
        read via read_environmental_context().
-       Used for multi-instance coordination (the "almacén scenario"):
+       Used for multi-instance coordination (the "warehouse scenario"):
        one SETT instance publishes a RiskLevel for a location,
        others in the same location read it and adjust their behavior.
 

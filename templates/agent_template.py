@@ -1,77 +1,79 @@
 """
 templates/agent_template.py
 ==============================
-Copiá este archivo, renombralo, y completá las partes marcadas con TODO.
+Copy this file, rename it, and fill in the parts marked TODO.
 
-Un agente:
-1. Se registra una sola vez en el orquestador: orchestrator.register_agent(MiAgente())
-2. Coordina uno o más expertos (ver expert_template.py)
-3. Termina process() de UNA de estas tres formas — elegí según lo que
-   necesites, están explicadas abajo, en el punto donde corresponde.
+An agent:
+1. Registers once with the orchestrator: orchestrator.register_agent(MyAgent())
+2. Coordinates one or more experts (see expert_template.py)
+3. Closes process() in ONE of three ways — pick whichever fits your
+   case, explained below at the point where it applies.
 
-No necesitás tocar nada del framework para agregar o sacar un agente.
-Sacarlo es simplemente no llamar a register_agent() con él.
+You don't need to touch anything in the framework to add or remove an
+agent. Removing one is simply not calling register_agent() with it.
 """
 from __future__ import annotations
 from typing import Any
 
 from sett import SETTAgent
 
-# TODO: importá tu(s) experto(s) real(es). Este import de ejemplo asume
-# que copiaste expert_template.py con el nombre my_expert.py al lado.
+# TODO: import your real expert(s). This example import assumes you
+# copied expert_template.py next to this file as my_expert.py.
 # from .my_expert import MyExpert
 
 
-# TODO: renombrá la clase y el dominio con el nombre de tu especialidad
-# (ej: HealthAgent/"health", WeatherAgent/"weather")
+# TODO: rename the class and the domain after your specialty
+# (e.g. HealthAgent/"health", WeatherAgent/"weather")
 class MyAgent(SETTAgent):
     """
-    TODO: una línea describiendo de qué dominio se especializa este agente.
-    Ejemplo: "Monitorea signos vitales y evalúa riesgo de salud."
+    TODO: one line describing what domain this agent specializes in.
+    Example: "Monitors vital signs and evaluates health risk."
     """
 
     def __init__(self) -> None:
         super().__init__(name="MyAgent", domain="my_domain")
 
-        # TODO: registrá acá cada experto que este agente coordina.
-        # Podés tener uno solo, o varios — no hay un número fijo
-        # correcto, depende de cuántas tareas distintas necesita tu
-        # dominio. Ver CONVENTIONS.md cuando exista.
-        # self.register_expert(MyExpert(name="mi_experto"))
+        # TODO: register each expert this agent coordinates here.
+        # You can have just one, or several — there's no fixed correct
+        # number, it depends on how many distinct tasks your domain
+        # needs. See CONVENTIONS.md once it exists.
+        # self.register_expert(MyExpert(name="my_expert"))
         pass
 
     def process(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        # TODO: llamá a tu(s) experto(s) y combiná sus resultados.
-        # resultado = self.get_expert("mi_experto").resolve(input_data)
-        resultado: dict[str, Any] = {}
+        # TODO: call your expert(s) and combine their results.
+        # result = self.get_expert("my_expert").resolve(input_data)
+        result: dict[str, Any] = {}
 
-        # ── Elegí UNA de estas tres formas de cerrar process() ─────────
+        # ── Pick ONE of these three ways to close process() ───────────
         #
-        # (A) Este agente solo informa un estado — no ejecuta ningún
-        #     efecto en el mundo real (no manda nada, no llama a nadie).
-        #     Es el caso más común. El resultado pasa por el
-        #     EthicalFilter antes de guardarse en memoria universal.
+        # (A) This agent only reports a state — it doesn't execute any
+        #     real-world effect (doesn't send anything, doesn't call
+        #     anyone). The most common case. The result passes through
+        #     the EthicalFilter before being stored in universal memory.
         #
-        # self._publish_to_universal(resultado)
-        # return resultado
+        # self._publish_to_universal(result)
+        # return result
 
-        # (B) Este agente SÍ produce un efecto real (mandar un mensaje,
-        #     llamar una API), pero no configuraste un SETTExecutor
-        #     todavía, o es algo de bajo riesgo/prototipo rápido. Se
-        #     evalúa contra el EthicalFilter ANTES de que vos mismo
-        #     ejecutes el efecto a continuación de esta llamada.
+        # (B) This agent DOES produce a real effect (sending a message,
+        #     calling an API), but you haven't configured a
+        #     SETTExecutor yet, or it's something low-stakes / quick
+        #     prototyping. It's evaluated against the EthicalFilter
+        #     BEFORE you execute the real effect yourself, right after
+        #     this call.
         #
-        # self.propose_action("mi_accion", action_context=input_data)
-        # (acá recién, si no se bloqueó, ejecutás vos el efecto real)
-        # return resultado
+        # self.propose_action("my_action", action_context=input_data)
+        # (only reached here if it wasn't blocked — now execute the
+        #  real effect yourself)
+        # return result
 
-        # (C) Este agente produce un efecto real y querés la garantía
-        #     estructural completa: este agente NUNCA toca el cliente
-        #     real (SMS, API, lo que sea) — solo describe la intención.
-        #     Requiere un SETTExecutor con un handler registrado para
-        #     "mi_accion" (ver docs/api_reference.md → SETTExecutor).
+        # (C) This agent produces a real effect and you want the full
+        #     structural guarantee: this agent NEVER touches the real
+        #     client (SMS, API, whatever it is) — it only describes
+        #     intent. Requires a SETTExecutor with a handler registered
+        #     for "my_action" (see docs/api_reference.md → SETTExecutor).
         #
-        # delivery = self.submit_action("mi_accion", payload=resultado)
-        # return {**resultado, **delivery}
+        # delivery = self.submit_action("my_action", payload=result)
+        # return {**result, **delivery}
 
-        return resultado
+        return result
