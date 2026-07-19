@@ -2,7 +2,7 @@
 SETT Framework — Tests: PhrasingExpert
 ======================================================
 Tests for the base class that formalizes the "LLM only phrases,
-never invents" pattern found independently twice in AIDA-mini.
+never invents" pattern found independently twice in an early prototype.
 """
 import pytest
 from sett import PhrasingExpert

@@ -24,7 +24,7 @@ class PrivateMemory:
     - The agent uses this memory to compose its final result before
       publishing to UniversalMemory.
 
-    Inspired by AIDA's memory.py — simplified and made agent-specific.
+    Inspired by an early prototype's memory.py — simplified and made agent-specific.
     """
 
     def __init__(self, owner: str):

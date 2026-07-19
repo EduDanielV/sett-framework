@@ -13,7 +13,7 @@ The ContextAnalyzer answers WHY we arrived at a potential action,
 what the emotional and situational context is, and what the consequences
 would be. It always prioritizes the protection of the human.
 
-In AIDA, the SentimentAnalyzerAgent feeds the RiskProfile here.
+In a real deployment, a sentiment-analysis agent would feed the RiskProfile here.
 Wearable sensors feed the health data.
 The EnvironmentalContext is read from UniversalMemory.
 """

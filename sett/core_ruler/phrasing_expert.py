@@ -5,7 +5,7 @@ Base class for any expert whose job includes producing text the user
 will actually read or hear.
 
 This formalizes a pattern that emerged independently twice while
-building AIDA-mini on top of SETT (GreeterAgent's greeting, and its
+building a companion-assistant prototype on top of SETT (its greeting expert, and its
 weather-question acknowledgment) — before either one was planned as a
 reusable pattern. That repetition, unplanned, is the signal that this
 belongs in the framework itself, not copy-pasted per project.

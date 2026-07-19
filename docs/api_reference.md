@@ -239,7 +239,7 @@ class MyExpert(SETTExpert):
 
 ### PhrasingExpert
 
-Base class for any expert whose job includes producing text the user will actually read or hear (a greeting, an acknowledgment, a synthesized summary, a redacted alert). Formalizes a pattern discovered independently twice while building AIDA-mini before either instance was planned as reusable.
+Base class for any expert whose job includes producing text the user will actually read or hear (a greeting, an acknowledgment, a synthesized summary, a redacted alert). Formalizes a pattern discovered independently twice while building an early companion-assistant prototype, before either instance was planned as reusable.
 
 ```python
 from sett import PhrasingExpert

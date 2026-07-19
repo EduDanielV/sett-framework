@@ -62,7 +62,7 @@ class NotifyExpert(SETTExpert):
     """
 
     def resolve(self, context):
-        message = f"Reminder: {context.get('reminder', 'check in with AIDA')}"
+        message = f"Reminder: {context.get('reminder', 'checking in')}"
         if self._private_memory:
             self._private_memory.write("last_message", message)
         return {"to": context.get("phone"), "message": message}

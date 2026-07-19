@@ -4,7 +4,7 @@ SETT Framework — Ethical Rules
 Defines harm categories, their weights, and the evaluation thresholds
 used by the EthicalFilter.
 
-Directly inspired by AIDA's moral_eval.py — generalized into a
+Directly inspired by an early prototype's moral_eval.py — generalized into a
 reusable ruleset system that any SETT deployment can customize.
 
 The guiding principle: "Do not cause direct or indirect harm to human beings."

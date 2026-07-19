@@ -227,7 +227,7 @@ if __name__ == "__main__":
 
     print(f"Registered agents: {orchestrator.registered_domains}\n")
 
-    # Simulate user context — in AIDA this would come from
+    # Simulate user context — in a real deployment this would come from
     # wearable sensors, user profile, and location services
     user_context = {
         "heart_rate_bpm": 88,

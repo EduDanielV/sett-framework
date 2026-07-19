@@ -2,9 +2,9 @@
 SETT Framework — Tests: register_analyzer
 ======================================================
 Tests for per-action-type ContextAnalyzer registration on EthicalFilter
-(Phase 0.5 of the AIDA-on-SETT schema — resolves the "two projects,
-two ContextAnalyzers" conflict found while building aida-mini and
-budget_on_sett on top of the same framework).
+(resolves the "two projects,
+two ContextAnalyzers" conflict found while building two independent
+prototype applications on top of the same framework).
 """
 import pytest
 from sett import EthicalFilter, EthicalRuleset

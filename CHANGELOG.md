@@ -35,7 +35,7 @@ All notable changes to the SETT framework are documented here.
   domain your router/synthesizer needs to call, so a multi-agent
   system's full flow is testable end to end before every real agent
   exists; swap in the real agent later under the same domain with no
-  other change required. Extracted from AIDA's own construction on top
+  other change required. Extracted from a companion-assistant application built on top
   of SETT (first used to build and test a router and a multi-domain
   synthesizer before any of six domains had a real implementation).
   10 new tests, including one verifying a stub can be transparently
@@ -50,13 +50,13 @@ All notable changes to the SETT framework are documented here.
   in the actual score computation (only `reject_threshold`,
   `warn_threshold`, and `principle` are), so this changes no existing
   numeric behavior for anyone using the default ruleset — it only
-  completes it. Found because a real downstream project (AIDA) had
+  completes it. Found because a real downstream project had
   already worked around the gap by adding the rule to its own custom
   ruleset.
 
 ### Notes
 - 158 tests passing. No breaking changes.
-- This is Phase 0 and Phase 0.5 of the "AIDA on SETT" reconstruction
+- This is Phase 0 and Phase 0.5 of a larger companion-assistant reconstruction
   schema — both were blockers for later phases (Shopping integration
   needed register_analyzer; any user-facing expert benefits from
   PhrasingExpert).

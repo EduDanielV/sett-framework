@@ -46,7 +46,7 @@ class AwareContextAnalyzer(ContextAnalyzer):
     """
     Extended ContextAnalyzer that accepts a live emotional state.
 
-    In a real AIDA deployment, the SentimentAnalyzerAgent would publish
+    In a real deployment, a sentiment-analysis agent would publish
     the user's emotional state to UniversalMemory. The EthicalFilter
     would read it from there and pass it to this analyzer.
 

@@ -15,7 +15,7 @@ describe intent as an Action and submit it here. The Executor:
     3. If approved: invokes the handler registered for that action_type —
        this is the ONLY place the real side effect happens
     4. Returns the handler's result upward, so the Orchestrator (and from
-       there, the application built on SETT — e.g. AIDA) can incorporate
+       there, the application built on SETT) can incorporate
        it into the system's response
 
 This is the structural alternative to SETTAgent.propose_action(): where
