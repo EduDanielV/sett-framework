@@ -51,7 +51,49 @@ class EthicalFilter:
     ) -> None:
         self._ruleset = ruleset or default_ruleset()
         self._context_analyzer = context_analyzer or ContextAnalyzer()
+        self._analyzers_by_action_type: dict[str, ContextAnalyzer] = {}
         self._audit_log: list[dict[str, Any]] = []
+
+    def register_analyzer(self, action_type: str, analyzer: ContextAnalyzer) -> None:
+        """
+        Register a domain-specific ContextAnalyzer for one action type.
+
+        Real deployments often need more than keyword-based scoring for
+        a specific action — e.g. an economic analyzer for
+        "confirm_purchase" that reads over_budget_amount, or a health
+        analyzer for "emergency_call" that reads vitals directly. This
+        lets you register exactly that, per action type, without
+        replacing the analyzer used for everything else.
+
+        Additive and safe: any action_type without a registered
+        analyzer keeps using the generic one passed to __init__ (or
+        the default ContextAnalyzer). Existing code that never calls
+        this keeps working exactly as before.
+
+        Args:
+            action_type: The exact action string this analyzer applies
+                to (e.g. "confirm_purchase", "emergency_call"). Must
+                match the `action` argument passed to evaluate().
+            analyzer: The ContextAnalyzer to use for this action type.
+
+        Example:
+            filter = EthicalFilter()  # generic analyzer as fallback
+            filter.register_analyzer("confirm_purchase", EconomicContextAnalyzer())
+            # any other action_type still uses the generic analyzer
+        """
+        self._analyzers_by_action_type[action_type] = analyzer
+
+    def unregister_analyzer(self, action_type: str) -> None:
+        """
+        Remove a previously registered analyzer for an action type.
+        That action type falls back to the generic analyzer again.
+        Safe to call even if nothing was registered for it.
+        """
+        self._analyzers_by_action_type.pop(action_type, None)
+
+    def _analyzer_for(self, action: str) -> ContextAnalyzer:
+        """Returns the registered analyzer for this action, or the generic one."""
+        return self._analyzers_by_action_type.get(action, self._context_analyzer)
 
     def evaluate(
         self,
@@ -77,8 +119,11 @@ class EthicalFilter:
         Raises:
             SETTEthicalFilterRejectedError: If the action is blocked.
         """
-        # Full three-layer analysis
-        analysis = self._context_analyzer.analyze(
+        # Full three-layer analysis — uses the analyzer registered for
+        # this specific action_type if one exists, otherwise the
+        # generic analyzer (same behavior as before register_analyzer
+        # existed).
+        analysis = self._analyzer_for(action).analyze(
             action=action,
             context=context,
             emotional_state=emotional_state,

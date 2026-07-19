@@ -237,6 +237,76 @@ class MyExpert(SETTExpert):
 
 ---
 
+### PhrasingExpert
+
+Base class for any expert whose job includes producing text the user will actually read or hear (a greeting, an acknowledgment, a synthesized summary, a redacted alert). Formalizes a pattern discovered independently twice while building AIDA-mini before either instance was planned as reusable.
+
+```python
+from sett import PhrasingExpert
+
+PhrasingExpert(name, llm=None)
+```
+
+Subclasses implement three methods instead of `resolve()` directly — `resolve()` is a template method you should not override:
+
+| Method | Description |
+|---|---|
+| `determine_facts(context)` → `dict` | Pure deterministic logic — no LLM involved. Returns what's true regardless of how it ends up phrased. |
+| `build_prompt(facts, context)` → `str` | Describes, in natural language, what the LLM should say based on the facts already computed. Never pass raw, unprocessed context the LLM could misread as license to invent additional facts. |
+| `fallback_text(facts, context)` → `str` | The deterministic text used when there's no LLM configured, or when the call fails for any reason. Must always produce a valid result on its own. |
+
+| Class attribute | Description |
+|---|---|
+| `OUTPUT_KEY` | The key the phrased text is merged under in the result dict. Override per subclass (e.g. `"greeting"`, `"summary"`). Defaults to `"text"`. |
+| `SYSTEM_PROMPT` | The system prompt sent to the LLM. Override per subclass/persona. |
+
+**Contract:** the LLM only *phrases* facts your deterministic logic already produced — it never invents or alters them. If no `llm` is given, or the adapter raises `SETTLLMAdapterError`, `PhrasingExpert` falls back to `fallback_text()` automatically; a broken or absent LLM never prevents an agent from responding.
+
+**Minimal implementation**
+
+```python
+class GreetingExpert(PhrasingExpert):
+    OUTPUT_KEY = "greeting"
+
+    def determine_facts(self, context):
+        hour = context.get("hour", 9)
+        return {"time_of_day": "morning" if hour < 12 else "afternoon"}
+
+    def build_prompt(self, facts, context):
+        return f"Greet the user. It's {facts['time_of_day']}."
+
+    def fallback_text(self, facts, context):
+        return {"morning": "Good morning.", "afternoon": "Good afternoon."}[facts["time_of_day"]]
+
+expert = GreetingExpert(name="greeting", llm=OllamaAdapter())
+result = expert.resolve({"hour": 8})
+# {"time_of_day": "morning", "greeting": "<LLM-phrased or fallback text>"}
+```
+
+---
+
+### StubDomainAgent
+
+A generic, ready-to-use placeholder agent for a domain that isn't built yet. Unlike `agent_template.py`/`expert_template.py` in `templates/`, this needs no subclassing or customization — import it and use it directly.
+
+```python
+from sett import StubDomainAgent
+
+StubDomainAgent(domain, name=None)
+```
+
+Useful when assembling a multi-agent system incrementally: register a `StubDomainAgent` for every domain your router or synthesizer needs to be able to call, so the full flow (dispatch → collect → synthesize) is testable end to end before any of the real agents exist. Swap in the real agent later by registering it under the same domain — since `SETTOrchestrator.register_agent()` keys agents by domain, the new registration replaces the stub with no other change required anywhere else in the system.
+
+`process()` returns `{"status": "stub", "domain": ..., "received": <input_data>}` — an honest, structured result a downstream synthesizer can narrate as "not built yet" instead of crashing or fabricating an answer.
+
+```python
+orchestrator.register_agent(StubDomainAgent("health"))
+# ... later, once HealthAgent exists:
+orchestrator.register_agent(HealthAgent())  # replaces the stub
+```
+
+---
+
 ## memory_ruler
 
 ### PrivateMemory
@@ -432,6 +502,28 @@ Evaluate an action through the three-layer system.
 
 Returns `FilterVerdict.ALLOW` or `FilterVerdict.WARN`.
 Raises `SETTEthicalFilterRejectedError` if the action is blocked.
+
+---
+
+`register_analyzer(action_type, analyzer)` → `None`
+
+Registers a domain-specific `ContextAnalyzer` for one exact action type. Real deployments often need more than keyword-based scoring for a specific action — e.g. an economic analyzer for `"confirm_purchase"` that reads `over_budget_amount`, or a health analyzer for `"emergency_call"` that reads vitals directly. Any `action_type` without a registered analyzer keeps using the generic one passed to `__init__` (or the default `ContextAnalyzer`) — additive and safe, existing code that never calls this keeps working exactly as before.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `action_type` | `str` | Must match the exact `action` string passed to `evaluate()`. |
+| `analyzer` | `ContextAnalyzer` | The analyzer to use for this action type only. |
+
+```python
+filt = EthicalFilter()  # generic analyzer stays the fallback for everything else
+filt.register_analyzer("confirm_purchase", EconomicContextAnalyzer())
+```
+
+---
+
+`unregister_analyzer(action_type)` → `None`
+
+Removes a previously registered analyzer for an action type — it falls back to the generic analyzer again. Safe to call even if nothing was registered for it.
 
 ---
 

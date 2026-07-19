@@ -19,7 +19,7 @@ Usage:
     from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 """
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 __author__ = "Eduardo Daniel Viñales"
 __license__ = "MIT"
 
@@ -27,8 +27,10 @@ __license__ = "MIT"
 from sett.core_ruler.orchestrator import SETTOrchestrator
 from sett.core_ruler.agent import SETTAgent
 from sett.core_ruler.expert import SETTExpert
+from sett.core_ruler.phrasing_expert import PhrasingExpert
 from sett.core_ruler.action import Action
 from sett.core_ruler.executor import SETTExecutor
+from sett.core_ruler.stub_agent import StubDomainAgent
 
 # Memory layers
 from sett.memory_ruler.universal import UniversalMemory
@@ -70,8 +72,10 @@ __all__ = [
     "SETTOrchestrator",
     "SETTAgent",
     "SETTExpert",
+    "PhrasingExpert",
     "Action",
     "SETTExecutor",
+    "StubDomainAgent",
     # Memory
     "UniversalMemory",
     "PrivateMemory",

@@ -2,6 +2,65 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.4.0] — 2026-07-17
+
+### Added
+- `EthicalFilter.register_analyzer(action_type, analyzer)` /
+  `unregister_analyzer(action_type)` — register a domain-specific
+  `ContextAnalyzer` for one exact action type, with the generic
+  analyzer as fallback for everything else. Resolves a real conflict
+  found building two independent projects on SETT (aida-mini and
+  budget_on_sett): `EthicalFilter` only accepted a single analyzer for
+  the whole system, so a project needing domain-specific scoring (e.g.
+  economic harm for `"confirm_purchase"`) had to fully replace the
+  generic analyzer for every action, not just the one that needed it.
+  Additive and safe — existing code that never calls this is
+  unaffected. 9 new tests. Verified in `budget_on_sett`: switching
+  from a full analyzer replacement to `register_analyzer("confirm_purchase", ...)`
+  produced byte-for-byte identical verdicts across all four demo
+  scenarios, with the added correctness that every other action now
+  uses the real generic analyzer instead of borrowing the economic one.
+- `docs/api_reference.md` now documents `PhrasingExpert` — the base
+  class formalizing the "LLM only phrases deterministic facts, never
+  invents them, always has a fallback" pattern discovered independently
+  twice while building aida-mini before either instance was planned as
+  reusable. (The class itself already existed in the codebase; this
+  release adds its documentation and its first real-world validation.)
+  Verified by refactoring aida-mini's `GreetingExpert` to use it —
+  splitting one expert that mixed two phrasing responsibilities
+  (greeting + habit acknowledgment) into two focused `PhrasingExpert`
+  subclasses, with identical observable behavior before and after.
+- `StubDomainAgent` — a generic, ready-to-use placeholder agent for a
+  domain that isn't built yet. No subclassing needed. Register one per
+  domain your router/synthesizer needs to call, so a multi-agent
+  system's full flow is testable end to end before every real agent
+  exists; swap in the real agent later under the same domain with no
+  other change required. Extracted from AIDA's own construction on top
+  of SETT (first used to build and test a router and a multi-domain
+  synthesizer before any of six domains had a real implementation).
+  10 new tests, including one verifying a stub can be transparently
+  replaced by a real agent under the same domain.
+
+### Fixed
+- `default_ruleset()` was missing a rule for `HarmCategory.AMBIGUITY`,
+  even though the category and its weight (2.0) were already defined
+  in `DEFAULT_HARM_WEIGHTS` — an inconsistency between what the
+  framework declares and what its own default ruleset actually uses.
+  Confirmed safe to add: `EthicalRuleset.rules` is not read anywhere
+  in the actual score computation (only `reject_threshold`,
+  `warn_threshold`, and `principle` are), so this changes no existing
+  numeric behavior for anyone using the default ruleset — it only
+  completes it. Found because a real downstream project (AIDA) had
+  already worked around the gap by adding the rule to its own custom
+  ruleset.
+
+### Notes
+- 158 tests passing. No breaking changes.
+- This is Phase 0 and Phase 0.5 of the "AIDA on SETT" reconstruction
+  schema — both were blockers for later phases (Shopping integration
+  needed register_analyzer; any user-facing expert benefits from
+  PhrasingExpert).
+
 ## [0.3.1] — 2026-07-17
 
 ### Fixed

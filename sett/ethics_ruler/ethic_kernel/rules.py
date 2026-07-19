@@ -136,4 +136,11 @@ def default_ruleset() -> EthicalRuleset:
         description="System must not withhold critical information or action when a person is at risk.",
     ))
 
+    ruleset.add_rule(EthicalRule(
+        name="flag_ambiguity",
+        category=HarmCategory.AMBIGUITY,
+        weight=DEFAULT_HARM_WEIGHTS[HarmCategory.AMBIGUITY],
+        description="Uncertain or unclear consequences must be flagged, not ignored.",
+    ))
+
     return ruleset
