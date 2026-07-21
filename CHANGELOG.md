@@ -2,20 +2,52 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.5.0] — 2026-07-21
+
+### Added
+- `SETTEthicalFilterRejectedError` now carries structured attributes —
+  `.action`, `.score`, `.threshold`, `.principle`, `.reasoning` — in
+  addition to its human-readable message. `str(e)` returns exactly the
+  same message as before, byte for byte; the attributes expose the same
+  data without string parsing. `.score` and `.threshold` are full-precision
+  floats (the message renders the score rounded to 2 decimals).
+  Motivated by real downstream usage, not theory: an application built
+  on SETT needed the score and principle separately and had to parse
+  `str(e)` by hand, which caused an actual bug — splitting the message
+  on `"."` truncated a decimal score. All attributes default to `None`,
+  so any code constructing the exception with only a message keeps
+  working unchanged. 10 new tests covering both guarantees separately:
+  message compatibility and structured access.
+
+### Notes
+- 168 tests passing. No breaking changes. The only `raise` site in the
+  framework (`EthicalFilter.evaluate()` on REJECT) now passes the
+  structured data alongside the unchanged message.
+
 ## [0.4.0] — 2026-07-17
+
+### Docs (post-release correction, 2026-07-20)
+- **Corrected note**: the originally published v0.4.0 entry of this
+  changelog named specific private downstream projects built on SETT.
+  Those references have been replaced with generic descriptions
+  ("two independent projects", "an early prototype application",
+  "a companion-assistant application"), in line with the repository's
+  policy of not naming private projects in public documentation. The
+  technical content of the entry is unchanged; noted here to keep the
+  version history accurate rather than silently rewriting it.
 
 ### Added
 - `EthicalFilter.register_analyzer(action_type, analyzer)` /
   `unregister_analyzer(action_type)` — register a domain-specific
   `ContextAnalyzer` for one exact action type, with the generic
   analyzer as fallback for everything else. Resolves a real conflict
-  found building two independent projects on SETT (aida-mini and
-  budget_on_sett): `EthicalFilter` only accepted a single analyzer for
-  the whole system, so a project needing domain-specific scoring (e.g.
-  economic harm for `"confirm_purchase"`) had to fully replace the
-  generic analyzer for every action, not just the one that needed it.
+  found building two independent projects on SETT: `EthicalFilter`
+  only accepted a single analyzer for the whole system, so a project
+  needing domain-specific scoring (e.g. economic harm for
+  `"confirm_purchase"`) had to fully replace the generic analyzer for
+  every action, not just the one that needed it.
   Additive and safe — existing code that never calls this is
-  unaffected. 9 new tests. Verified in `budget_on_sett`: switching
+  unaffected. 9 new tests. Verified in one of those projects: switching
   from a full analyzer replacement to `register_analyzer("confirm_purchase", ...)`
   produced byte-for-byte identical verdicts across all four demo
   scenarios, with the added correctness that every other action now
@@ -23,13 +55,14 @@ All notable changes to the SETT framework are documented here.
 - `docs/api_reference.md` now documents `PhrasingExpert` — the base
   class formalizing the "LLM only phrases deterministic facts, never
   invents them, always has a fallback" pattern discovered independently
-  twice while building aida-mini before either instance was planned as
-  reusable. (The class itself already existed in the codebase; this
-  release adds its documentation and its first real-world validation.)
-  Verified by refactoring aida-mini's `GreetingExpert` to use it —
-  splitting one expert that mixed two phrasing responsibilities
-  (greeting + habit acknowledgment) into two focused `PhrasingExpert`
-  subclasses, with identical observable behavior before and after.
+  twice while building an early prototype application, before either
+  instance was planned as reusable. (The class itself already existed
+  in the codebase; this release adds its documentation and its first
+  real-world validation.) Verified by refactoring that prototype's
+  greeting expert to use it — splitting one expert that mixed two
+  phrasing responsibilities (greeting + habit acknowledgment) into two
+  focused `PhrasingExpert` subclasses, with identical observable
+  behavior before and after.
 - `StubDomainAgent` — a generic, ready-to-use placeholder agent for a
   domain that isn't built yet. No subclassing needed. Register one per
   domain your router/synthesizer needs to call, so a multi-agent

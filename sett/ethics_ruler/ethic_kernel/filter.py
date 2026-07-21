@@ -172,7 +172,12 @@ class EthicalFilter:
                 f"Action '{action}' blocked. "
                 f"Score: {score:.2f} (threshold: {effective_reject:.2f}). "
                 f"Principle: {self._ruleset.principle}. "
-                f"Reasoning: {analysis.reasoning}"
+                f"Reasoning: {analysis.reasoning}",
+                action=action,
+                score=score,
+                threshold=effective_reject,
+                principle=self._ruleset.principle,
+                reasoning=analysis.reasoning,
             )
 
         return verdict

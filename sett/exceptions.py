@@ -15,9 +15,41 @@ class SETTError(Exception):
 class SETTEthicalFilterRejectedError(SETTError):
     """
     Raised when the EthicalFilter blocks an action or a memory write.
-    Includes the harm score and the principle that was violated.
+
+    ``str(e)`` returns the same human-readable message it always has.
+    In addition, the structured data behind that message is available
+    as instance attributes, so downstream code never needs to parse
+    the message string:
+
+    Attributes:
+        action (str | None): The action type that was blocked.
+        score (float | None): The computed harm score.
+        threshold (float | None): The effective reject threshold the
+            score was compared against (environmental modifiers already
+            applied).
+        principle (str | None): The ruleset principle in effect.
+        reasoning (str | None): The analyzer's reasoning for the score.
+
+    All attributes default to ``None``, so code that raises this
+    exception with only a message keeps working unchanged.
     """
-    pass
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        action: str | None = None,
+        score: float | None = None,
+        threshold: float | None = None,
+        principle: str | None = None,
+        reasoning: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.action = action
+        self.score = score
+        self.threshold = threshold
+        self.principle = principle
+        self.reasoning = reasoning
 
 
 class SETTEthicalFilterWarningError(SETTError):

@@ -785,7 +785,7 @@ All SETT exceptions inherit from `SETTError`.
 | Exception | Raised when |
 |---|---|
 | `SETTError` | Base class for all SETT exceptions. |
-| `SETTEthicalFilterRejectedError` | The EthicalFilter blocks an action or memory write. Contains the harm score, threshold, and reasoning. |
+| `SETTEthicalFilterRejectedError` | The EthicalFilter blocks an action or memory write. Carries structured attributes (see below) in addition to the readable message. |
 | `SETTEthicalFilterWarningError` | The EthicalFilter issues a warning. The action proceeds but is flagged. |
 | `SETTMemoryAccessDeniedError` | An entity attempts to access memory it has no permission for (e.g. orchestrator reading `PrivateMemory`). |
 | `SETTAgentNotFoundError` | The orchestrator cannot find a registered agent for the requested domain. |
@@ -801,4 +801,33 @@ try:
     orchestrator.process(input_data, domain="emergency")
 except SETTEthicalFilterRejectedError as e:
     print(f"Action blocked: {e}")
+```
+
+### Structured attributes on `SETTEthicalFilterRejectedError`
+
+`str(e)` returns the same human-readable message as always. In addition,
+the data behind that message is available as real attributes — downstream
+code should read these instead of parsing the message string:
+
+| Attribute | Type | Meaning |
+|---|---|---|
+| `e.action` | `str \| None` | The action type that was blocked. |
+| `e.score` | `float \| None` | The computed harm score, full precision (the message renders it rounded to 2 decimals). |
+| `e.threshold` | `float \| None` | The effective reject threshold the score was compared against, with environmental modifiers already applied. |
+| `e.principle` | `str \| None` | The ruleset principle in effect. |
+| `e.reasoning` | `str \| None` | The analyzer's reasoning behind the score. |
+
+All attributes default to `None` if the exception is constructed with only
+a message, so existing raising code keeps working unchanged.
+
+```python
+try:
+    executor.submit_action(proposal)
+except SETTEthicalFilterRejectedError as e:
+    audit_ui.show(
+        action=e.action,
+        score=e.score,          # a float — no string parsing
+        threshold=e.threshold,
+        principle=e.principle,
+    )
 ```

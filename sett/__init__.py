@@ -19,7 +19,7 @@ Usage:
     from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __author__ = "Eduardo Daniel Viñales"
 __license__ = "MIT"
 
