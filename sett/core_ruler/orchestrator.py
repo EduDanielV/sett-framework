@@ -265,6 +265,143 @@ class SETTOrchestrator:
         """Return all published EnvironmentalContexts, keyed by location_id."""
         return self._universal_memory.read_all_environmental_contexts()
 
+    # ── Native pipelines ─────────────────────────────────────────────────────
+
+    def run_pipeline(
+        self,
+        steps: list["PipelineStep | str"],
+        input_data: dict[str, Any],
+        emotional_state: str = "unknown",
+        location_id: str = "global",
+    ) -> "PipelineResult":
+        """
+        Run an ordered sequence of stages, each handled by a different
+        registered agent, with explicit data flow between stages.
+
+        This is a NEW, additive capability: process() (route-to-one /
+        broadcast-to-all) is unchanged. Each stage executes through the
+        exact same path as routed processing — same propagation of
+        emotional_state and location_id, same EthicalFilter evaluation
+        on publish, same audit log entries.
+
+        Three guarantees define the mechanism:
+
+        1. **Memory isolation between stages.** Each stage's input is
+           passed explicitly — the previous stage's output, optionally
+           reshaped by the step's ``transform`` — never read from
+           universal memory. Agents keep their own PrivateMemory and
+           never see another stage's intermediate reasoning.
+
+        2. **Fail-closed configuration.** All stage domains are
+           validated before the first stage runs; an empty pipeline or
+           an unknown domain raises before any side effect. A transform
+           that returns a non-dict raises SETTConfigurationError at that
+           stage.
+
+        3. **Rejection handling as part of the mechanism.** If the
+           EthicalFilter rejects a stage, that agent publishes nothing
+           (the filter raises before the write), the remaining stages
+           are skipped, and the rejection is returned EXPLICITLY in
+           ``PipelineResult.rejection`` — with the structured fields
+           (action, score, threshold, principle, reasoning) taken from
+           the exception's attributes. It is never written to, nor
+           meant to be read from, universal memory.
+
+        Args:
+            steps: Ordered stages. Each element is a PipelineStep, or a
+                   plain domain string (shorthand for
+                   ``PipelineStep(domain)``).
+            input_data: The pipeline's original input. The first stage
+                        receives it as-is unless its transform says
+                        otherwise; transforms of later stages also
+                        receive it as their first argument.
+            emotional_state: Propagated to every stage, same as process().
+            location_id: Propagated to every stage, same as process().
+
+        Returns:
+            A PipelineResult with one StageOutcome per stage, the final
+            output when completed, and the RejectionOutcome when halted.
+
+        Raises:
+            SETTConfigurationError: Empty pipeline, or a transform
+                returned a non-dict.
+            SETTAgentNotFoundError: A stage's domain has no registered
+                agent (raised before any stage runs).
+        """
+        from sett.core_ruler.pipeline import (
+            PipelineResult,
+            PipelineStep,
+            RejectionOutcome,
+            StageOutcome,
+        )
+        from sett.exceptions import SETTConfigurationError
+
+        if not steps:
+            raise SETTConfigurationError(
+                "run_pipeline() requires at least one step. "
+                "An empty pipeline is a configuration error, not a no-op."
+            )
+
+        # Normalize shorthand and validate the WHOLE pipeline before
+        # executing anything — fail closed, no partial side effects.
+        normalized: list[PipelineStep] = [
+            step if isinstance(step, PipelineStep) else PipelineStep(domain=step)
+            for step in steps
+        ]
+        for step in normalized:
+            self.get_agent(step.domain)  # raises SETTAgentNotFoundError
+
+        outcomes: list[StageOutcome] = []
+        prev_output: dict[str, Any] | None = None
+        rejection: RejectionOutcome | None = None
+
+        for index, step in enumerate(normalized):
+            if rejection is not None:
+                outcomes.append(StageOutcome(domain=step.domain, status="skipped"))
+                continue
+
+            # Explicit data flow — never via universal memory.
+            if step.transform is not None:
+                stage_input = step.transform(input_data, prev_output)
+                if not isinstance(stage_input, dict):
+                    raise SETTConfigurationError(
+                        f"Pipeline stage '{step.domain}': transform must "
+                        f"return a dict, got {type(stage_input).__name__}."
+                    )
+            else:
+                stage_input = input_data if index == 0 else prev_output
+
+            try:
+                logger.debug(
+                    "[Orchestrator] Pipeline stage %d -> '%s'",
+                    index, step.domain,
+                )
+                result = self._route_to_agent(
+                    step.domain, stage_input, emotional_state, location_id
+                )
+                outcomes.append(StageOutcome(
+                    domain=step.domain, status="completed", output=result,
+                ))
+                prev_output = result
+            except SETTEthicalFilterRejectedError as e:
+                rejection = RejectionOutcome.from_error(step.domain, e)
+                outcomes.append(StageOutcome(
+                    domain=step.domain, status="rejected", rejection=rejection,
+                ))
+                logger.warning(
+                    "[Orchestrator] Pipeline halted at stage %d ('%s'): "
+                    "EthicalFilter rejected.",
+                    index, step.domain,
+                )
+
+        completed = rejection is None
+        return PipelineResult(
+            completed=completed,
+            steps=tuple(outcomes),
+            output=prev_output if completed else None,
+            rejection=rejection,
+        )
+
     # ── Audit and introspection ──────────────────────────────────────────────
 
     def get_ethical_audit_log(self) -> list[dict[str, Any]]:

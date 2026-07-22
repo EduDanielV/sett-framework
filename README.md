@@ -49,6 +49,7 @@ pip install sett-framework
 # With LLM support
 pip install sett-framework[anthropic]   # Claude
 pip install sett-framework[openai]      # GPT
+pip install sett-framework[gemini]      # Gemini
 pip install sett-framework[all]         # All adapters
 ```
 
@@ -120,7 +121,8 @@ for entry in orchestrator.get_ethical_audit_log():
 - ✔ Actions as Data execution model
 - ✔ Ethical governance layer intercepting submitted actions and memory writes
 - ✔ Fail-closed execution — no handler, no Executor, no approval → nothing runs
-- ✔ Swappable LLM adapters (Claude, GPT, Gemini)
+- ✔ Native pipelines — chain agents with explicit, hand-to-hand data flow
+- ✔ Swappable LLM adapters (Claude, GPT, Gemini, Ollama)
 
 ## Core concepts
 
@@ -135,6 +137,7 @@ for entry in orchestrator.get_ethical_audit_log():
 | `PrivateMemory` | Each agent's internal workspace. Not accessible from outside. |
 | `EthicalFilter` | Governance layer. Every action passes through it before execution. |
 | `ContextAnalyzer` | Evaluates the emotional, biometric, and situational context of each action. |
+| `run_pipeline()` | Orchestrator method. Chains registered agents into an ordered sequence of stages with explicit, hand-to-hand data flow — never through universal memory — and fail-closed rejection handling. See `docs/api_reference.md`. |
 
 ## Four principles of SETT
 

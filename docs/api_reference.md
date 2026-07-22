@@ -109,6 +109,48 @@ List of all registered agent domains.
 
 ---
 
+`run_pipeline(steps, input_data, emotional_state="unknown", location_id="global")` → `PipelineResult`
+
+Run an ordered sequence of stages, each handled by a different registered agent, with **explicit data flow** between stages. This is an additive capability: `process()` (route-to-one / broadcast-to-all) is unchanged. Each stage executes through the same path as routed processing — same propagation of `emotional_state` / `location_id`, same `EthicalFilter` evaluation on publish, same audit log entries.
+
+`steps` is a list where each element is a `PipelineStep(domain, transform=None)` or a plain domain string (shorthand for a step without transform). By default the first stage receives `input_data` and every later stage receives the previous stage's output; a `transform(original_input, prev_output) -> dict` reshapes the stage's input when needed.
+
+Three guarantees define the mechanism:
+
+1. **Memory isolation between stages.** Stage inputs are passed hand-to-hand, never read from universal memory. Each agent keeps its own `PrivateMemory`; no stage sees another stage's intermediate reasoning.
+2. **Fail-closed configuration.** All stage domains are validated *before* the first stage runs (`SETTAgentNotFoundError`), an empty pipeline raises `SETTConfigurationError`, and a transform returning a non-dict raises `SETTConfigurationError`. A misconfigured pipeline never produces partial side effects.
+3. **Rejection handling as part of the mechanism.** If the `EthicalFilter` rejects a stage: that agent publishes nothing, the remaining stages are marked `"skipped"`, and the rejection is returned **explicitly** in `PipelineResult.rejection` as a `RejectionOutcome` carrying the structured fields (`action`, `score`, `threshold`, `principle`, `reasoning`, `message`) taken directly from the exception's attributes. The rejection is never written to, nor meant to be read from, universal memory — the caller that synthesizes the final response receives it directly.
+
+Return types (all frozen dataclasses, importable from `sett`):
+
+| Type | Fields |
+|---|---|
+| `PipelineStep` | `domain`, `transform` |
+| `StageOutcome` | `domain`, `status` (`"completed"` / `"rejected"` / `"skipped"`), `output`, `rejection` |
+| `RejectionOutcome` | `domain`, `action`, `score`, `threshold`, `principle`, `reasoning`, `message` |
+| `PipelineResult` | `completed`, `steps`, `output` (final stage's output when completed), `rejection` |
+
+```python
+from sett import PipelineStep
+
+result = orchestrator.run_pipeline(
+    ["price", "promotions", PipelineStep(
+        domain="budget",
+        transform=lambda original, prev: {**prev, "limit": original["limit"]},
+    )],
+    input_data={"items": [...], "limit": 150.0},
+    emotional_state="calm",
+)
+
+if result.completed:
+    final = result.output
+else:
+    r = result.rejection            # explicit hand-off — not in memory
+    notify_user(r.principle, r.score)   # structured, no string parsing
+```
+
+---
+
 ### SETTAgent
 
 Abstract base class for all SETT agents. Extend this class and implement `process()` to create a domain specialist.

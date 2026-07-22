@@ -2,6 +2,57 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.6.0] — 2026-07-22
+
+### Added
+- **Native pipelines**: `SETTOrchestrator.run_pipeline(steps, input_data, ...)`
+  runs an ordered sequence of stages, each handled by a different
+  registered agent, with explicit hand-to-hand data flow between stages.
+  New types `PipelineStep`, `StageOutcome`, `RejectionOutcome` and
+  `PipelineResult` (frozen dataclasses, exported from `sett`).
+  Three guarantees define the mechanism:
+  1. **Memory isolation between stages** — stage inputs are passed
+     explicitly (previous stage's output, optionally reshaped by a
+     per-step `transform`), never read from universal memory; each
+     agent keeps its own `PrivateMemory`.
+  2. **Fail-closed configuration** — every stage domain is validated
+     before the first stage runs; empty pipelines and transforms that
+     return non-dicts raise instead of silently no-oping. A
+     misconfigured pipeline never produces partial side effects.
+  3. **Rejection handling as part of the mechanism** — when the
+     `EthicalFilter` rejects a stage, that agent publishes nothing,
+     the remaining stages are skipped, and the rejection is returned
+     explicitly in `PipelineResult.rejection` with the structured
+     fields introduced in v0.5.0 (`action`, `score`, `threshold`,
+     `principle`, `reasoning`). Applications no longer need to wrap
+     each chain in hand-written try/except and pass the outcome to
+     their synthesizer manually — the mechanism does it.
+
+  Motivated by real downstream usage: an application built on SETT
+  chains seven agents by hand in a routing function, preserving memory
+  isolation between stages — the property that made flattening the
+  chain into a single agent unacceptable. That hand-written chain was
+  studied as the living specification for this API. Introducing native
+  pipelines before v1.0 (rather than after) avoids conflicting with
+  sequencing logic developers would otherwise write by hand against a
+  stable API.
+
+### Fixed
+- Version consistency: `sett.__version__` had fallen one version behind
+  `pyproject.toml` in the v0.6.0 preparation (it still reported the
+  previous version). Both now read 0.6.0, and a new guard test
+  (`tests/test_version_consistency.py`) asserts they always match, so
+  this class of mismatch can never ship silently again.
+
+### Notes
+- 188 tests passing (19 for native pipelines, covering the three
+  guarantees independently plus explicit verification that `process()`
+  routing and broadcast behavior is untouched; 1 version-consistency
+  guard).
+- Purely additive: `process()` is unchanged; no existing code needs
+  to change a line. Only a "halt" rejection policy is provided —
+  a "continue" policy waits for a real downstream case to need it.
+
 ## [0.5.0] — 2026-07-21
 
 ### Added
