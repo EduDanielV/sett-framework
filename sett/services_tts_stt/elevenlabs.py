@@ -13,12 +13,12 @@ Talks to ElevenLabs' REST API directly via `requests` — no ElevenLabs
 SDK dependency, same reasoning as OllamaAdapter using only stdlib for
 Ollama's local API (services_llm/ollama.py).
 
-Ported from the ElevenLabs patch archived in
-Archivo_legado/AIDA_full_voz/aida_elevenlabs_patch.zip (originally one
-engine among several in a multi-engine tts.py dispatcher). Only the
-ElevenLabs HTTP call is carried over — engine selection, local
-playback, and output-file pruning were application-layer concerns in
-that script and do not belong in a stateless adapter.
+Ported from an ElevenLabs patch archived alongside a downstream
+consumer application's legacy prototypes (originally one engine among
+several in a multi-engine tts.py dispatcher). Only the ElevenLabs HTTP
+call is carried over — engine selection, local playback, and
+output-file pruning were application-layer concerns in that script and
+do not belong in a stateless adapter.
 
 Requires: pip install sett-framework[elevenlabs]
 """
