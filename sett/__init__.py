@@ -19,7 +19,7 @@ Usage:
     from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 """
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 __author__ = "Eduardo Daniel Viñales"
 __license__ = "MIT"
 
@@ -57,8 +57,17 @@ from sett.risk_ruler.risk_level import RiskLevel
 from sett.risk_ruler.risk_profile import RiskProfile
 from sett.risk_ruler.environmental_context import EnvironmentalContext
 
+# Biometric system
+from sett.biometric_ruler.biometric_reading import BiometricReading
+
 # LLM adapters
 from sett.services_llm.base import LLMBase
+
+# TTS/STT adapters
+from sett.services_tts_stt.base import TTSBase, STTBase
+
+# Sentiment adapters
+from sett.services_sentiment.base import SentimentBase, SentimentResult, SentenceSentiment
 
 # Exceptions
 from sett.exceptions import (
@@ -101,8 +110,17 @@ __all__ = [
     "RiskLevel",
     "RiskProfile",
     "EnvironmentalContext",
+    # Biometric system
+    "BiometricReading",
     # LLM
     "LLMBase",
+    # TTS/STT
+    "TTSBase",
+    "STTBase",
+    # Sentiment
+    "SentimentBase",
+    "SentimentResult",
+    "SentenceSentiment",
     # Exceptions
     "SETTError",
     "SETTEthicalFilterRejectedError",

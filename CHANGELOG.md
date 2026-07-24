@@ -2,6 +2,133 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.7.0] — 2026-07-23
+
+Three additive, backward-compatible pieces, bumped together per
+Convención #21 ("no fragmentar dos piezas de trabajo ya terminadas en
+releases separados si van a publicarse en el mismo momento") rather
+than as three separate releases. Confirmed explicitly with Dan
+(2026-07-23) — not gated on the remaining plan points of the
+consumer application that motivated this work (multi-user
+permissions, module-proposal self-improvement): per Convención #19,
+finished work doesn't wait on decisions that have no date attached.
+
+### Added
+- `sett/services_tts_stt/base.py` — `TTSBase` and `STTBase`, the first
+  concrete interfaces for the `services_tts_stt` module (previously an
+  empty scaffold since v0.1.0). Same interchangeability contract as
+  `LLMBase`: an Expert depends on the interface, never on a specific
+  voice provider. Deliberately two separate interfaces, not one merged
+  "voice" interface — a provider can implement only one (ElevenLabs has
+  no STT product and gets no forced STT adapter).
+- `sett/services_tts_stt/google.py` — `GoogleTTSAdapter` and
+  `GoogleSTTAdapter`, backed by Google Cloud Text-to-Speech and
+  Speech-to-Text. Ported from a recovered pre-SETT prototype
+  (`listening.py`/`speaking.py`, Nov. 2024), reshaped to the stateless
+  adapter contract — the original's UI coupling, audio playback, and
+  concurrent-listen lock were left at the application layer on purpose
+  (see STTBase's docstring for why).
+- `sett/services_tts_stt/elevenlabs.py` — `ElevenLabsTTSAdapter`, backed
+  by ElevenLabs' REST API directly via `requests` (no SDK dependency,
+  same reasoning as `OllamaAdapter` using only stdlib for Ollama). Ported
+  from an archived multi-engine TTS patch — only the ElevenLabs call was
+  carried over, not the engine-selection/playback logic around it.
+- New optional-dependency extras in `pyproject.toml`: `google-tts-stt`
+  (`google-cloud-texttospeech`, `google-cloud-speech`) and `elevenlabs`
+  (`requests`). Core framework still has zero mandatory dependencies.
+- Convención #22 in `SETT_Convenciones_v2.md`: service adapters are
+  explicitly outside the Agent/Expert growth tree (#1) — no
+  `PrivateMemory`, no orchestrator registration, not a filter subject —
+  and the naming taxonomy (`...Base`, `...Adapter`, `...Agent`/`...Expert`,
+  `...Analyzer`, `SETT...Error`) is documented as a first-class
+  convention rather than left as unwritten practice.
+- 25 new tests: full mocked coverage for `ElevenLabsTTSAdapter` (HTTP
+  mocked, same style as `test_ollama_adapter.py`) and for
+  `GoogleTTSAdapter`/`GoogleSTTAdapter` (missing-dependency path made
+  deterministic via `sys.modules`, plus full synthesize()/transcribe()
+  behavior against an injected fake `google.cloud` module — the Google
+  Cloud SDK itself is not installed in this environment, so this is the
+  first test coverage a Google-Cloud-backed adapter has had in this
+  project; Gemini/OpenAI/Anthropic still have none, unchanged from
+  before). 213 tests passing (188 previous + 25 new).
+
+- `sett/services_sentiment/base.py` — `SentimentBase`, `SentimentResult`,
+  `SentenceSentiment`. Fills a slot that has existed since v0.1.1:
+  `ContextAnalyzer.analyze()`'s `emotional_state` parameter was
+  documented as "Detected emotional state (from Sentiment Analyzer)"
+  before any adapter supplied it. Returns a raw signal (polarity score,
+  magnitude, optional per-sentence breakdown) — mapping it to a
+  categorical `emotional_state` string is left to the application,
+  same layering choice as TTSBase/STTBase staying free of playback/UI.
+- `sett/services_sentiment/google.py` — `GoogleSentimentAdapter`, backed
+  by Google Cloud Natural Language. Ported from the recovered
+  `sentiment_analyzer.py` prototype's `analyze_text_sentiment()` only —
+  its GCS/BigQuery storage and its `enhance_response()` Gemini call
+  (text generation, not sentiment analysis) were both left out on
+  purpose, not merely trimmed for size.
+- `google-sentiment` extra (`google-cloud-language`) in `pyproject.toml`.
+- Convención #23 in `SETT_Convenciones_v2.md`: "ruler" is reserved for
+  the framework's own foundational pillars (`core_ruler`, `ethics_ruler`,
+  `memory_ruler`, `risk_ruler`), not for important domain Agents —
+  clarifies where it sits relative to #1 (Agent/Expert) and #22 (Adapter).
+- 10 more new tests for `GoogleSentimentAdapter` (same sys.modules
+  injection strategy as the TTS/STT Google tests). 223 tests passing
+  (213 previous + 10 new).
+
+- `sett/biometric_ruler/biometric_reading.py` — `BiometricReading`, a
+  new structural pillar mirroring how `risk_ruler` holds
+  `RiskProfile`/`EnvironmentalContext`. Extracted from
+  `ContextAnalyzer._detect_human_at_risk`, which read
+  `context["health"]`/`context["heart_rate_bpm"]` directly via ad hoc
+  dict access — including the nested-vs-flat fallback added in v0.1.1
+  to fix a real bug where an agent publishing flat biometric keys was
+  invisible to risk detection. That parsing now lives in
+  `BiometricReading.from_context()`, in one place instead of inline in
+  the ethics layer, closing off the specific way a second call site
+  could have reintroduced the same class of bug. Thresholds unchanged
+  (150/40 bpm, 39.5/35.0°C) — this is a relocation, not a
+  recalibration. `_detect_human_at_risk`'s behavior is unchanged byte
+  for byte; `test_ethics.py` was not modified and still passes.
+- Convención #23 amended with the concrete reasoning for why
+  `biometric_ruler` was built now while an `Emotion_Ruler` for
+  sentiment was deliberately not: biometrics already caused a real,
+  documented bug (v0.1.1) — actual "extraído del uso" (#15) evidence —
+  while the sentiment adapter added in this same release has zero
+  downstream consumers yet.
+- 21 new tests for `BiometricReading` (parsing, thresholds, boundaries,
+  serialization), independent of `ethics_ruler`. 244 tests passing (223
+  previous + 21 new).
+
+### Fixed
+- Eight literal mentions of a consumer application's internal codename
+  (in CHANGELOG.md, two adapter example docstrings, and three test
+  fixtures) that had accumulated across this same release, in
+  violation of Convención #20 — found by a manual sweep ahead of
+  preparing this release for public visibility. Docs/tests only, no
+  public API touched — stays under this same 0.7.0, per Convención #21
+  ("solo docs → sin release nuevo si el paquete no cambia").
+- `tests/test_no_internal_project_names.py`: new guard test, same
+  spirit as `test_version_consistency.py` — scans the whole public
+  tree for any casing of a consumer application's codename and fails
+  the suite if one leaks in again. 247 tests passing (244 previous +
+  3 new).
+
+### Notes
+- Motivated directly by the STT/TTS/sentiment gap identified while
+  reviewing a recovered pre-SETT prototype and by the decision to close
+  it before a v1.0.0 release — not by the "two independent instances"
+  rule (#14), which this deliberately does not wait for; foundational
+  I/O and perception infrastructure was judged not safely deferrable to
+  after a public release, same reasoning already written into #12's
+  origin (Ollama as zero-dependency default).
+- What `GoogleSentimentAdapter` does NOT do yet, on purpose: decide what
+  counts as "distressed" vs "anxious" for `EMOTIONAL_RISK_MODIFIERS`,
+  or connect to `PhrasingExpert` so generation reflects the detected
+  tone. Both are the next step (an application-level
+  `SentimentAnalyzerAgent`, per Convención #23) — this release is the
+  adapter the slot has been waiting for, not the agent that will use
+  it.
+
 ## [0.6.0] — 2026-07-22
 
 ### Added

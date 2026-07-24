@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sett-framework"
-version = "0.6.0"
+version = "0.7.0"
 description = "Scalable Expert-based Task Topology — A multi-agent AI development framework"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -32,13 +32,20 @@ requires-python = ">=3.10"
 dependencies = []  # Core framework has zero mandatory dependencies
 
 [project.optional-dependencies]
-anthropic = ["anthropic>=0.40.0"]
-openai    = ["openai>=1.40.0"]
-gemini    = ["google-generativeai>=0.8.0"]
-all       = [
+anthropic       = ["anthropic>=0.40.0"]
+openai          = ["openai>=1.40.0"]
+gemini          = ["google-generativeai>=0.8.0"]
+google-tts-stt  = ["google-cloud-texttospeech>=2.16.0", "google-cloud-speech>=2.26.0"]
+google-sentiment = ["google-cloud-language>=2.13.0"]
+elevenlabs      = ["requests>=2.31.0"]
+all             = [
     "anthropic>=0.40.0",
     "openai>=1.40.0",
     "google-generativeai>=0.8.0",
+    "google-cloud-texttospeech>=2.16.0",
+    "google-cloud-speech>=2.26.0",
+    "google-cloud-language>=2.13.0",
+    "requests>=2.31.0",
 ]
 dev = [
     "pytest>=8.0",

@@ -511,6 +511,43 @@ EnvironmentalContext(
 
 ---
 
+## biometric_ruler
+
+### BiometricReading
+
+Structural data model for physical vital-sign readings — same role for biometrics that `RiskProfile`/`EnvironmentalContext` play in `risk_ruler`: a typed value object `ethics_ruler` consumes, not a decision-maker itself. Extracted from `ContextAnalyzer._detect_human_at_risk`, which read `context["health"]`/`context["heart_rate_bpm"]` directly before this pillar existed.
+
+```python
+BiometricReading(
+    heart_rate_bpm=None,
+    temperature_celsius=None,
+)
+```
+
+All fields optional and immutable (`frozen=True`). A reading with no data present is valid and never critical.
+
+**Properties**
+
+| Property | Type | Description |
+|---|---|---|
+| `is_critical` | `bool` | `True` if heart rate is outside 40–150 bpm, or temperature is outside 35.0–39.5°C. |
+
+**Class methods**
+
+| Method | Description |
+|---|---|
+| `BiometricReading.from_context(context)` | Parse a reading out of an action's `context` dict. Prefers a nested `context["health"]` dict if present and non-empty; otherwise reads `heart_rate_bpm`/`temperature_celsius` directly from the top-level context. This nested/flat fallback is the fix for a real bug (v0.1.1): an agent publishing flat biometric keys was previously invisible to risk detection because only the nested form was checked. |
+
+**Instance methods**
+
+| Method | Description |
+|---|---|
+| `to_dict()` | Serialize for logging/storage. |
+
+**Privacy note:** `ContextAnalyzer` only ever reads `is_critical` (a bool) from this class — never the raw vital-sign values — so raw biometric data cannot leak into the audit log or `UniversalMemory` through this path, the same structural guarantee `RiskProfile` has for its own pillars.
+
+---
+
 ## ethics_ruler
 
 ### EthicalFilter

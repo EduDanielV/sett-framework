@@ -92,7 +92,8 @@ class SETTLLMAdapterError(SETTError):
 
 class SETTServiceAdapterError(SETTError):
     """
-    Raised when a TTS, STT, or generative AI adapter fails or is misconfigured.
+    Raised when a TTS, STT, sentiment, or generative AI adapter fails
+    or is misconfigured.
     """
     pass
 
