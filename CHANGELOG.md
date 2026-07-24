@@ -107,11 +107,23 @@ finished work doesn't wait on decisions that have no date attached.
   preparing this release for public visibility. Docs/tests only, no
   public API touched — stays under this same 0.7.0, per Convención #21
   ("solo docs → sin release nuevo si el paquete no cambia").
+- Second incident, found AFTER the fix above had already been pushed:
+  a ninth mention (`services_tts_stt/elevenlabs.py`'s docstring,
+  a file path containing the codename) had slipped past the new guard
+  test because its `\b` (word-boundary) pattern treats underscore as a
+  "word" character, so it never matched a codename directly adjacent
+  to `_`. Fixed the docstring, and closed the gap in the pattern itself
+  (letters-only boundary instead of `\b`) so this class of miss can't
+  recur. 7 new regression tests fix both the catch (underscore/digit-
+  adjacent variants) and the non-regression (no new false positives on
+  unrelated words).
 - `tests/test_no_internal_project_names.py`: new guard test, same
   spirit as `test_version_consistency.py` — scans the whole public
   tree for any casing of a consumer application's codename and fails
-  the suite if one leaks in again. 247 tests passing (244 previous +
-  3 new).
+  the suite if one leaks in again. Deliberately excluded from the
+  published tree via `.gitignore` (it necessarily names, in its own
+  source, the codename it audits for) — run it locally before every
+  release, it is not part of the 244 tests below.
 
 ### Notes
 - Motivated directly by the STT/TTS/sentiment gap identified while
