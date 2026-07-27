@@ -1,25 +1,25 @@
 """
-SETT Framework — Ollama (local) Adapter
+SETT Framework: Ollama (local) Adapter
 ==============================
 LLM adapter for locally-running models via Ollama (https://ollama.com).
 
-No API key, no cloud, no cost — the model runs entirely on your own
+No API key, no cloud, no cost: the model runs entirely on your own
 machine. Requires ONLY that Ollama itself be installed and running
 (`ollama serve`, usually started automatically) with at least one model
 pulled (e.g. `ollama pull qwen3:1.7b`).
 
 Unlike AnthropicAdapter/OpenAIAdapter/GeminiAdapter, this adapter has
-NO extra pip dependency at all — it talks to Ollama's local REST API
+NO extra pip dependency at all: it talks to Ollama's local REST API
 using only Python's standard library (urllib). If you can run
 `ollama pull <model>` and `ollama serve`, this adapter works with
 nothing else to install on the Python side.
 
 Recommended low-resource models (verified good picks as of 2026 for
 machines without a dedicated GPU):
-    - qwen3:1.7b     — lightest, ~4GB RAM, strong multilingual support
-    - phi4-mini      — 3.8B, MIT license, built for CPU-only machines
+    - qwen3:1.7b    : lightest, ~4GB RAM, strong multilingual support
+    - phi4-mini     : 3.8B, MIT license, built for CPU-only machines
 
-Implements the LLMBase interface — fully interchangeable with the
+Implements the LLMBase interface: fully interchangeable with the
 cloud adapters. This is what makes SETT's principle 4 ("LLM as engine,
 not architecture") concrete: swapping AnthropicAdapter for
 OllamaAdapter changes zero lines anywhere else in your system.
@@ -66,13 +66,13 @@ class OllamaAdapter(LLMBase):
         """
         Args:
             model: The Ollama model tag to use (must already be pulled
-                   locally — run `ollama pull <model>` first).
+                   locally: run `ollama pull <model>` first).
             base_url: Where Ollama's local server is listening. Default
                       is correct for almost everyone; only change this
                       if you moved Ollama to a different port/host.
             temperature: Sampling temperature (0.0 to 1.0).
             timeout_seconds: How long to wait for a response before
-                giving up. Local CPU inference can be slow — raise this
+                giving up. Local CPU inference can be slow: raise this
                 if you see timeouts on a low-resource machine.
         """
         self._model = model
@@ -85,7 +85,7 @@ class OllamaAdapter(LLMBase):
         return self._model
 
     def complete(self, prompt: str, system: str = "", **kwargs: Any) -> str:
-        """One-shot completion — no conversation history."""
+        """One-shot completion: no conversation history."""
         payload: dict[str, Any] = {
             "model": self._model,
             "prompt": prompt,
@@ -123,7 +123,7 @@ class OllamaAdapter(LLMBase):
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         """
         POST JSON to the local Ollama server using only the standard
-        library — no extra pip dependency required for this adapter.
+        library: no extra pip dependency required for this adapter.
         """
         url = f"{self._base_url}{path}"
         body = json.dumps(payload).encode("utf-8")
@@ -148,7 +148,7 @@ class OllamaAdapter(LLMBase):
             raise SETTLLMAdapterError(
                 f"Ollama did not respond within {self._timeout_seconds}s. "
                 f"Local CPU inference can be slow on the first call (the "
-                f"model needs to load into memory) — try again, or raise "
+                f"model needs to load into memory): try again, or raise "
                 f"timeout_seconds if this keeps happening."
             ) from e
 

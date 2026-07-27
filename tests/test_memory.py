@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: Memory Layer
+SETT Framework: Tests: Memory Layer
 ======================================================
 Unit and integration tests for UniversalMemory and PrivateMemory.
 
@@ -199,7 +199,7 @@ class TestUniversalMemory:
         assert len(all_ctx) == 2
 
     def test_env_context_update_overwrites_previous(self):
-        """A location's context should be updatable — latest wins."""
+        """A location's context should be updatable: latest wins."""
         mem = UniversalMemory()
         mem.publish_environmental_context(EnvironmentalContext(
             risk_level=RiskLevel.LEVEL_1, location_id="zone"

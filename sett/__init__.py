@@ -19,7 +19,7 @@ Usage:
     from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 """
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 __author__ = "Eduardo Daniel Viñales"
 __license__ = "MIT"
 
@@ -50,9 +50,13 @@ from sett.ethics_ruler.ethic_kernel.rules import (
     HarmCategory,
     default_ruleset,
 )
-from sett.ethics_ruler.ethic_kernel.context_analyzer import ContextAnalyzer
+from sett.ethics_ruler.ethic_kernel.context_analyzer import (
+    ContextAnalyzer,
+    ContextAnalysis,
+    SafetyAssessment,
+)
 
-# Risk system — three-layer hybrid evaluation
+# Risk system: three-layer hybrid evaluation
 from sett.risk_ruler.risk_level import RiskLevel
 from sett.risk_ruler.risk_profile import RiskProfile
 from sett.risk_ruler.environmental_context import EnvironmentalContext
@@ -106,6 +110,8 @@ __all__ = [
     "HarmCategory",
     "default_ruleset",
     "ContextAnalyzer",
+    "ContextAnalysis",
+    "SafetyAssessment",
     # Risk system
     "RiskLevel",
     "RiskProfile",

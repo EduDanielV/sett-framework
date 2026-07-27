@@ -1,10 +1,10 @@
 """
-SETT Framework — Ethical Rules
+SETT Framework: Ethical Rules
 ==============================
 Defines harm categories, their weights, and the evaluation thresholds
 used by the EthicalFilter.
 
-Directly inspired by an early prototype's moral_eval.py — generalized into a
+Directly inspired by an early prototype's moral_eval.py: generalized into a
 reusable ruleset system that any SETT deployment can customize.
 
 The guiding principle: "Do not cause direct or indirect harm to human beings."
@@ -27,7 +27,7 @@ class HarmCategory(Enum):
     AMBIGUITY = "ambiguity"         # Uncertain or unclear consequences
 
 
-# Default harm weights — higher means more serious
+# Default harm weights: higher means more serious
 # These reflect the priority SETT places on human wellbeing and dignity.
 DEFAULT_HARM_WEIGHTS: dict[HarmCategory, float] = {
     HarmCategory.PHYSICAL: 10.0,

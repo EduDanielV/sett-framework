@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: biometric_ruler (BiometricReading)
+SETT Framework: Tests: biometric_ruler (BiometricReading)
 ======================================================
 Covers the extraction from ContextAnalyzer._detect_human_at_risk:
 these tests pin the exact nested/flat parsing behavior (the v0.1.1 fix)
@@ -32,7 +32,7 @@ class TestFromContextParsing:
     def test_nested_takes_priority_over_flat(self):
         reading = BiometricReading.from_context(
             {
-                "heart_rate_bpm": 70,  # flat — should be ignored
+                "heart_rate_bpm": 70,  # flat: should be ignored
                 "health": {"heart_rate_bpm": 180},
             }
         )

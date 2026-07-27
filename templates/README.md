@@ -1,7 +1,7 @@
 # Templates
 
 Starting point for creating your own agent and experts. Copy, rename,
-fill in the `TODO`s. Both templates, as they are, are real code — they
+fill in the `TODO`s. Both templates, as they are, are real code: they
 can be instantiated and run without filling in anything, so if
 something fails right after copying them, the problem is with your
 import, not the template.
@@ -9,12 +9,12 @@ import, not the template.
 ## Recommended order
 
 1. Copy `expert_template.py` once for each specific task your domain
-   needs to resolve (one, two, five — the number is defined by your
+   needs to resolve (one, two, five: the number is defined by your
    domain, not a fixed rule).
 2. Copy `agent_template.py` once, and register the experts you wrote
    in step 1 there.
 3. Inside the agent's `process()`, pick **one** of the three ways to
-   close it — they're explained in the file itself. Quick rule:
+   close it: they're explained in the file itself. Quick rule:
    - Does your agent only report a state? → option (A).
    - Does it execute something real (message, API) but you're
      prototyping quickly? → option (B), `propose_action`.

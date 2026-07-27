@@ -1,12 +1,12 @@
 """
-SETT Framework — services_sentiment
+SETT Framework: services_sentiment
 ==============================
 Sentiment/emotional-tone analysis adapters. See base.py (SentimentBase,
 SentimentResult) for the interface every provider implements, and
 google.py for the first concrete adapter.
 
 This module produces a raw signal (polarity score, magnitude, optional
-per-sentence breakdown) — it does not decide what any consumer
+per-sentence breakdown): it does not decide what any consumer
 application does with it. Mapping a SentimentResult to a categorical
 emotional_state string (see
 sett/ethics_ruler/ethic_kernel/context_analyzer.py's

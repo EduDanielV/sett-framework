@@ -1,5 +1,5 @@
 """
-SETT Framework — BiometricReading
+SETT Framework: BiometricReading
 ==============================
 Structural data model for physical vital-sign readings, same role in
 biometric_ruler that RiskProfile/EnvironmentalContext play in
@@ -22,7 +22,7 @@ class BiometricReading:
         if reading.is_critical:
             ...
 
-    All fields are optional — a reading with no data present is valid
+    All fields are optional: a reading with no data present is valid
     and simply never critical (`is_critical` is False when every field
     is None), matching the original behavior in
     ContextAnalyzer._detect_human_at_risk: absence of biometric data is
@@ -38,7 +38,7 @@ class BiometricReading:
     TEMPERATURE_MIN_C: ClassVar[float] = 35.0
     """
     Thresholds unchanged from the values ContextAnalyzer._detect_human_at_risk
-    used inline before this extraction (v0.1.1 through v0.6.0) — this
+    used inline before this extraction (v0.1.1 through v0.6.0): this
     refactor relocates them, it does not recalibrate them. Recalibrating
     is a separate, deliberate decision for someone with the clinical
     basis to make it.
@@ -56,7 +56,7 @@ class BiometricReading:
         Mirrors exactly the two checks _detect_human_at_risk performed
         inline: heart rate outside (40, 150) bpm, or temperature
         outside (35.0, 39.5) °C. A field that is None is never
-        evaluated — missing data is not itself a risk signal.
+        evaluated: missing data is not itself a risk signal.
         """
         if self.heart_rate_bpm is not None and (
             self.heart_rate_bpm > self.HEART_RATE_MAX_BPM
@@ -80,7 +80,7 @@ class BiometricReading:
         extraction: prefer a nested "health" dict if present and
         non-empty, otherwise read the same keys directly from the
         top-level context. Centralizing this parsing in one place is
-        the actual fix for the class of bug v0.1.1 patched — v0.1.1
+        the actual fix for the class of bug v0.1.1 patched: v0.1.1
         fixed the one call site that existed then; without a single
         shared parser, a second call site added later could silently
         reintroduce the identical bug by guessing the shape differently.
@@ -105,7 +105,7 @@ class BiometricReading:
         """
         Serialize for logging/storage. Deliberately does NOT include
         raw vital-sign values by default in any audit-log path this
-        framework writes to — ethics_ruler only ever reads
+        framework writes to: ethics_ruler only ever reads
         `is_critical` (a bool) from this class, never the raw numbers,
         so a privacy leak of biometric data into UniversalMemory or the
         audit log is structurally impossible via that path, same

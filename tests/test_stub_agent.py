@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: StubDomainAgent
+SETT Framework: Tests: StubDomainAgent
 ======================================================
 Tests for the generic placeholder agent used to assemble multi-domain
 systems incrementally before every domain has a real implementation.
@@ -61,7 +61,7 @@ class TestStubDomainAgent:
 
     def test_stub_can_be_replaced_by_real_agent_under_same_domain(self):
         """The whole point: swapping a stub for a real agent needs no
-        other change — callers only depend on the domain string."""
+        other change: callers only depend on the domain string."""
         from sett import SETTAgent, SETTExpert
 
         class RealHealthExpert(SETTExpert):

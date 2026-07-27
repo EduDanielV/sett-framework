@@ -1,5 +1,5 @@
 """
-SETT Framework — SETTExpert
+SETT Framework: SETTExpert
 ==============================
 The most atomic unit in SETT.
 
@@ -7,7 +7,7 @@ An expert is a specialized module that lives inside an agent.
 It handles one specific task, updates the agent's private memory,
 and returns a result that the agent uses to compose its final output.
 
-Several experts form one agent — that is the core of the SETT hierarchy.
+Several experts form one agent: that is the core of the SETT hierarchy.
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod

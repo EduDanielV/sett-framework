@@ -1,13 +1,13 @@
 """
-SETT Framework — Google Cloud Sentiment Adapter
+SETT Framework: Google Cloud Sentiment Adapter
 ==============================
 Sentiment analysis adapter backed by Google Cloud Natural Language.
 
-Implements SentimentBase — fully interchangeable with any other
+Implements SentimentBase: fully interchangeable with any other
 provider's adapter.
 
 Ported from the recovered Virtual-assistant-1st-attempt prototype
-(SentimentAnalyzer class, Nov. 2024) — same underlying sentiment call
+(SentimentAnalyzer class, Nov. 2024): same underlying sentiment call
 (`language_v1.LanguageServiceClient().analyze_sentiment`), reduced to
 just that. Two things present in the original were deliberately not
 carried over:
@@ -15,12 +15,12 @@ carried over:
   - Storing results in Google Cloud Storage + loading them to
     BigQuery: that was infrastructure for a solo experiment logging
     its own history, not something a sentiment adapter needs to do to
-    answer "what is the sentiment of this text" — an application that
+    answer "what is the sentiment of this text": an application that
     wants to log results can do so with the SentimentResult this
     adapter already returns, without the adapter reaching into two
     more cloud services on every call.
   - `enhance_response()` (a Gemini call to generate text): that is
-    text generation, not sentiment analysis — it belongs to an LLM
+    text generation, not sentiment analysis: it belongs to an LLM
     adapter/PhrasingExpert, not here. Mixing it into this class was
     exactly the kind of two-responsibilities-in-one-expert pattern
     Convención #1's corollary already documents splitting.

@@ -1,14 +1,14 @@
 """
-SETT Framework — Google Cloud TTS/STT Adapters
+SETT Framework: Google Cloud TTS/STT Adapters
 ==============================
 Text-to-speech and speech-to-text adapters backed by Google Cloud
 (Text-to-Speech API and Speech-to-Text API).
 
-Implements TTSBase and STTBase — fully interchangeable with any other
+Implements TTSBase and STTBase: fully interchangeable with any other
 provider's adapters (e.g. ElevenLabsTTSAdapter for synthesis).
 
 Ported from the recovered Virtual-assistant-1st-attempt prototype
-(Speaker/Listener classes, Nov. 2024) — same underlying Google Cloud
+(Speaker/Listener classes, Nov. 2024): same underlying Google Cloud
 calls, reshaped to the stateless adapter contract: no UI coupling, no
 playback, no listening loop. Those concerns stayed in the recovered
 code as reference (Archivo_legado/Prototipos_2022-2024/
@@ -118,7 +118,7 @@ class GoogleSTTAdapter(STTBase):
     """
     Speech-to-text adapter for Google Cloud Speech-to-Text.
 
-    Expects LINEAR16-encoded audio (standard WAV PCM) — the same
+    Expects LINEAR16-encoded audio (standard WAV PCM): the same
     encoding `speech_recognition.Microphone` produces via
     `audio.get_wav_data()`, which is what the recovered Listener class
     fed it.

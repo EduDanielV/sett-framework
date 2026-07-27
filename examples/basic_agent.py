@@ -1,5 +1,5 @@
 """
-SETT Framework — Basic Agent Example
+SETT Framework: Basic Agent Example
 ==============================
 The simplest possible SETT system:
 one orchestrator, one agent, two experts.
@@ -96,4 +96,4 @@ if __name__ == "__main__":
 
     print("\n── Ethical Audit Log ───────────────────")
     for entry in orchestrator.get_ethical_audit_log():
-        print(f"[{entry['verdict']}] {entry['action']} — score: {entry['harm_score']}")
+        print(f"[{entry['verdict']}] {entry['action']}: score: {entry['harm_score']}")

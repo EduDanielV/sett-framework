@@ -1,5 +1,5 @@
 """
-Tests for SETTOrchestrator.run_pipeline() — native pipelines.
+Tests for SETTOrchestrator.run_pipeline(): native pipelines.
 
 The three guarantees of the mechanism, each verified independently:
 
@@ -11,7 +11,7 @@ The three guarantees of the mechanism, each verified independently:
    no-ops).
 3. Rejection handling as part of the mechanism (rejected agent never
    publishes; remaining stages skipped; rejection handed back
-   EXPLICITLY in the result with structured fields — never via
+   EXPLICITLY in the result with structured fields: never via
    universal memory).
 
 Plus: process() (route/broadcast) is byte-for-byte untouched by the
@@ -155,8 +155,8 @@ class TestFailClosedConfiguration:
         orch, agents = build_orchestrator(["a", "b"])
         with pytest.raises(SETTAgentNotFoundError):
             orch.run_pipeline(["a", "ghost", "b"], {"trail": []})
-        # Fail-closed means NO partial side effects: stage 'a' — which
-        # comes BEFORE the bad domain — must never have executed.
+        # Fail-closed means NO partial side effects: stage 'a': which
+        # comes BEFORE the bad domain: must never have executed.
         assert agents["a"].seen_inputs == []
         assert orch.read_universal_memory().get("data", {}) in ({}, None) or \
             "a_done" not in str(orch.read_universal_memory())
@@ -248,7 +248,7 @@ class TestMemoryIsolation:
 
     def test_stages_do_not_feed_from_universal_memory(self):
         """A value published to universal memory by stage 1 must NOT
-        appear in stage 2's input — data flows hand-to-hand only."""
+        appear in stage 2's input: data flows hand-to-hand only."""
         orch, agents = build_orchestrator(["a", "b"])
         orch.run_pipeline(["a", "b"], {"trail": []})
         seen_by_b = agents["b"].seen_inputs[0]
@@ -270,6 +270,6 @@ class TestProcessUntouched:
         results = orch.process({"trail": [], "value": 0})
         assert set(results.keys()) == {"x", "y"}
         # broadcast semantics: each agent got the ORIGINAL input,
-        # not a chained one — pipelines did not leak into broadcast
+        # not a chained one: pipelines did not leak into broadcast
         assert results["x"]["value"] == 1
         assert results["y"]["value"] == 1

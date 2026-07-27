@@ -1,5 +1,5 @@
 """
-SETT Framework — EnvironmentalContext
+SETT Framework: EnvironmentalContext
 ==============================
 The bridge between the user layer (RiskProfile) and the shared environment.
 
@@ -92,7 +92,7 @@ class EnvironmentalContext:
     auto_notify_emergency: bool = field(init=False)
     """
     If True, the orchestrator should automatically contact emergency services.
-    Derived from risk_level — True for LEVEL_4 and LEVEL_5.
+    Derived from risk_level: True for LEVEL_4 and LEVEL_5.
     """
 
     def __post_init__(self) -> None:
@@ -110,7 +110,7 @@ class EnvironmentalContext:
 
     @property
     def is_systemic_emergency(self) -> bool:
-        """True only for LEVEL_5 — maximum protocol."""
+        """True only for LEVEL_5: maximum protocol."""
         return self.risk_level == RiskLevel.LEVEL_5
 
     @property

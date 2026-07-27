@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sett-framework"
-version = "0.7.0"
-description = "Scalable Expert-based Task Topology — A multi-agent AI development framework"
+version = "0.8.0"
+description = "Scalable Expert-based Task Topology: A multi-agent AI development framework"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
@@ -25,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Application Frameworks",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]

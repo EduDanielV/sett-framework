@@ -1,8 +1,8 @@
 """
-SETT Framework — Tests: GoogleTTSAdapter / GoogleSTTAdapter
+SETT Framework: Tests: GoogleTTSAdapter / GoogleSTTAdapter
 ======================================================
 google-cloud-texttospeech and google-cloud-speech are optional
-dependencies (pip install sett-framework[google-tts-stt]) — this test
+dependencies (pip install sett-framework[google-tts-stt]): this test
 environment does not have them installed, matching how
 AnthropicAdapter/OpenAIAdapter/GeminiAdapter have no dedicated test
 file today (they need their real SDK to test meaningfully and this
@@ -15,7 +15,7 @@ What IS tested here without the real SDK:
     installed);
   - the full synthesize()/transcribe() behavior using a fake
     google.cloud.texttospeech / google.cloud.speech module injected
-    into sys.modules — the adapter code cannot tell the difference
+    into sys.modules: the adapter code cannot tell the difference
     between this and the real package, since both are reached through
     the same `from google.cloud import texttospeech` lazy import.
 """
@@ -27,7 +27,7 @@ from sett.exceptions import SETTServiceAdapterError
 
 
 # ---------------------------------------------------------------------------
-# "Package not installed" — deterministic regardless of the environment.
+# "Package not installed": deterministic regardless of the environment.
 # ---------------------------------------------------------------------------
 
 class TestMissingDependency:
@@ -51,7 +51,7 @@ class TestMissingDependency:
 
 # ---------------------------------------------------------------------------
 # Fake google.cloud.texttospeech / google.cloud.speech modules, injected via
-# sys.modules — the adapter's lazy `from google.cloud import X` cannot tell
+# sys.modules: the adapter's lazy `from google.cloud import X` cannot tell
 # these apart from the real package.
 # ---------------------------------------------------------------------------
 
@@ -62,7 +62,7 @@ def _fake_google_cloud_sys_modules(submodule_name: str, submodule_mock: MagicMoc
     Not enough to only patch sys.modules["google.cloud.<name>"]: Python's
     IMPORT_FROM opcode tries `getattr(sys.modules["google.cloud"], name)`
     FIRST, and a plain MagicMock parent auto-generates that attribute
-    instead of raising AttributeError — so it would silently return an
+    instead of raising AttributeError: so it would silently return an
     unrelated, unconfigured mock instead of falling through to the
     sys.modules submodule lookup. Setting the attribute explicitly on the
     parent mock is what makes `from google.cloud import X` actually reach

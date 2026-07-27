@@ -1,5 +1,5 @@
 """
-SETT Framework — RiskLevel
+SETT Framework: RiskLevel
 ==============================
 The environmental context layer of the SETT hybrid risk system.
 
@@ -14,16 +14,16 @@ The key distinction from surveillance systems:
     RiskLevel does NOT identify individuals.
     It describes the shared context they inhabit.
     A SETT instance publishing Level 4 says:
-    "The environment where I am has this risk level"
-    — not "this specific person is dangerous".
+    "The environment where I am has this risk level",
+    not "this specific person is dangerous".
 
 Levels:
-    0 — NORMAL       No detected threats. System operates at baseline.
-    1 — ATTENTION    Minor anomaly. Passive monitoring increased.
-    2 — WARNING      Clear but controllable threat developing.
-    3 — DANGER       Situation developing. Prepare for action.
-    4 — CRITICAL     Out of human control. Mandatory response.
-    5 — EMERGENCY    Systemic emergency. Maximum response protocol.
+    0: NORMAL       No detected threats. System operates at baseline.
+    1: ATTENTION    Minor anomaly. Passive monitoring increased.
+    2: WARNING      Clear but controllable threat developing.
+    3: DANGER       Situation developing. Prepare for action.
+    4: CRITICAL     Out of human control. Mandatory response.
+    5: EMERGENCY    Systemic emergency. Maximum response protocol.
 """
 from __future__ import annotations
 from enum import IntEnum
@@ -50,12 +50,12 @@ class RiskLevel(IntEnum):
             # adjust behavior accordingly
     """
 
-    LEVEL_0 = 0  # NORMAL — baseline operation
-    LEVEL_1 = 1  # ATTENTION — anomaly detected, passive monitoring
-    LEVEL_2 = 2  # WARNING — controlled threat, access restrictions possible
-    LEVEL_3 = 3  # DANGER — active threat, prepare for response
-    LEVEL_4 = 4  # CRITICAL — evacuation or immediate action required
-    LEVEL_5 = 5  # EMERGENCY — systemic emergency, maximum protocol
+    LEVEL_0 = 0  # NORMAL: baseline operation
+    LEVEL_1 = 1  # ATTENTION: anomaly detected, passive monitoring
+    LEVEL_2 = 2  # WARNING: controlled threat, access restrictions possible
+    LEVEL_3 = 3  # DANGER: active threat, prepare for response
+    LEVEL_4 = 4  # CRITICAL: evacuation or immediate action required
+    LEVEL_5 = 5  # EMERGENCY: systemic emergency, maximum protocol
 
     @property
     def label(self) -> str:

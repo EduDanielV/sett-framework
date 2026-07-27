@@ -1,11 +1,11 @@
 """
-SETT Framework — LLM Base Adapter
+SETT Framework: LLM Base Adapter
 ==============================
 Abstract interface that all LLM adapters must implement.
 
 This ensures SETT is not tied to any specific language model.
 Swap Claude for GPT, Gemini, or a local model by changing
-the adapter — no other code needs to change.
+the adapter: no other code needs to change.
 
 Following the same intercambiability philosophy for TTS/STT in services_tts_stt/
 and generative AI in services_gen_ai/.

@@ -1,13 +1,13 @@
 """
-SETT Framework — Native pipelines
+SETT Framework: Native pipelines
 ==============================
 Data structures for SETTOrchestrator.run_pipeline().
 
 A pipeline is an ordered sequence of stages, each handled by a different
 registered agent. Three properties define the mechanism:
 
-1. **Explicit data flow.** Each stage receives its input explicitly —
-   the previous stage's output (optionally transformed) — never by
+1. **Explicit data flow.** Each stage receives its input explicitly:
+   the previous stage's output (optionally transformed), never by
    reading UniversalMemory. Memory isolation between stages is the
    reason this mechanism exists: each agent keeps its own PrivateMemory
    and never sees another stage's intermediate reasoning.
@@ -20,7 +20,7 @@ registered agent. Three properties define the mechanism:
    EthicalFilter rejects a stage, the rejected agent never publishes
    (guaranteed by the filter raising before the write), the remaining
    stages are skipped, and the rejection outcome is handed back
-   EXPLICITLY in the PipelineResult — never read from universal
+   EXPLICITLY in the PipelineResult: never read from universal
    memory. Applications no longer wrap each chain in try/except by
    hand.
 """
@@ -58,7 +58,7 @@ class RejectionOutcome:
     """
     The structured record of an EthicalFilter rejection inside a
     pipeline. Built from the structured attributes of
-    SETTEthicalFilterRejectedError — no string parsing anywhere.
+    SETTEthicalFilterRejectedError: no string parsing anywhere.
 
     This object is handed back explicitly in the PipelineResult so the
     caller (typically whatever synthesizes the final response) receives
@@ -94,10 +94,10 @@ class StageOutcome:
     What happened at one stage of a pipeline run.
 
     status is one of:
-        "completed" — the agent processed and returned normally.
-        "rejected"  — the EthicalFilter blocked the stage; the agent
+        "completed": the agent processed and returned normally.
+        "rejected" : the EthicalFilter blocked the stage; the agent
                       published nothing. ``rejection`` is populated.
-        "skipped"   — a previous stage was rejected; this stage never ran.
+        "skipped"  : a previous stage was rejected; this stage never ran.
     """
     domain: str
     status: str

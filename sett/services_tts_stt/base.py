@@ -1,23 +1,23 @@
 """
-SETT Framework — TTS/STT Base Adapters
+SETT Framework: TTS/STT Base Adapters
 ==============================
 Abstract interfaces that all text-to-speech and speech-to-text
 adapters must implement.
 
 Same intercambiability philosophy as LLMBase (sett/services_llm/base.py):
 swap Google Cloud for ElevenLabs, or any future provider, by changing
-the adapter — no other code needs to change. An Expert or Agent that
+the adapter: no other code needs to change. An Expert or Agent that
 needs voice depends on TTSBase/STTBase, never on a specific provider's
 SDK.
 
 TTSBase and STTBase are deliberately two separate interfaces, not one
-merged "voice" interface — a provider is free to implement only one of
+merged "voice" interface: a provider is free to implement only one of
 them (ElevenLabs, historically TTS-only, implements TTSBase and has no
 STTBase adapter; nothing about the interface forces it to pretend
 otherwise). See SETT_Convenciones_v2.md, entrada sobre nomenclatura de
 servicios: los adapters de un mismo proveedor se agrupan por archivo
 (sett/services_tts_stt/google.py trae GoogleTTSAdapter Y
-GoogleSTTAdapter, comparten credenciales), no por clase — cada clase
+GoogleSTTAdapter, comparten credenciales), no por clase: cada clase
 implementa una sola interfaz, para que el aislamiento de tests y la
 intercambiabilidad no se pierdan.
 """
@@ -33,7 +33,7 @@ class TTSBase(ABC):
     Implement one method:
     - synthesize(): text in, audio bytes out.
 
-    Deliberately does NOT play audio, write files, or touch any UI —
+    Deliberately does NOT play audio, write files, or touch any UI:
     that is an application-layer concern (see the recovered
     Virtual-assistant-1st-attempt Speaker/Listener classes for why:
     they mixed playback and UI updates into the adapter itself, which
@@ -82,7 +82,7 @@ class STTBase(ABC):
 
     Deliberately does not own a microphone, a listening loop, or any
     concurrency guard (the recovered Listener class's asyncio.Lock
-    against overlapping listens is real and worth keeping — but it is
+    against overlapping listens is real and worth keeping: but it is
     orchestration, not transcription, so it belongs in the
     application/Expert layer that calls this adapter, not inside it).
 
@@ -99,13 +99,13 @@ class STTBase(ABC):
 
         Args:
             audio: Raw audio bytes (encoding expected by the specific
-                adapter — check its docstring, e.g. LINEAR16 WAV for
+                adapter: check its docstring, e.g. LINEAR16 WAV for
                 GoogleSTTAdapter).
             **kwargs: Provider-specific parameters (language_code, etc.)
 
         Returns:
             The transcribed text. Empty string if nothing was
-            recognized — adapters raise SETTServiceAdapterError only
+            recognized: adapters raise SETTServiceAdapterError only
             for actual failures (network, auth, malformed audio), not
             for silence or unrecognized speech.
         """

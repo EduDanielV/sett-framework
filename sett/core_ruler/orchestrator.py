@@ -1,5 +1,5 @@
 """
-SETT Framework — SETTOrchestrator
+SETT Framework: SETTOrchestrator
 ==============================
 The brain and central meeting point of all agents.
 
@@ -57,7 +57,7 @@ class SETTOrchestrator:
         self._agents: dict[str, SETTAgent] = {}
         self._universal_memory = UniversalMemory()
         self._ethical_filter = ethical_filter or EthicalFilter()
-        self._executor = None  # SETTExecutor | None — set via register_executor()
+        self._executor = None  # SETTExecutor | None: set via register_executor()
 
         # Connect the ethical filter to universal memory
         # Every write to universal memory will pass through it
@@ -88,7 +88,7 @@ class SETTOrchestrator:
         Register a SETTExecutor with this orchestrator. Gives it access
         to universal memory (so it can evaluate actions through the
         EthicalFilter and read EnvironmentalContext), and attaches it to
-        every agent already registered — as well as to any agent
+        every agent already registered: as well as to any agent
         registered afterward, automatically.
 
         Args:
@@ -134,7 +134,7 @@ class SETTOrchestrator:
         propagated to the agent (and from there, automatically, to the
         EthicalFilter via _publish_to_universal()). Previously
         emotional_state was accepted here but silently dropped before
-        reaching agent.process() — every real evaluation ran with
+        reaching agent.process(): every real evaluation ran with
         emotional_state="unknown" regardless of what was passed in.
 
         Args:
@@ -226,7 +226,7 @@ class SETTOrchestrator:
         has reached a notable risk level. Other SETT instances in the same
         location will read this and adjust their behavior.
 
-        No personal data is published — only the RiskLevel, location,
+        No personal data is published: only the RiskLevel, location,
         and the source domain that triggered it.
 
         Args:
@@ -280,15 +280,15 @@ class SETTOrchestrator:
 
         This is a NEW, additive capability: process() (route-to-one /
         broadcast-to-all) is unchanged. Each stage executes through the
-        exact same path as routed processing — same propagation of
+        exact same path as routed processing: same propagation of
         emotional_state and location_id, same EthicalFilter evaluation
         on publish, same audit log entries.
 
         Three guarantees define the mechanism:
 
         1. **Memory isolation between stages.** Each stage's input is
-           passed explicitly — the previous stage's output, optionally
-           reshaped by the step's ``transform`` — never read from
+           passed explicitly: the previous stage's output, optionally
+           reshaped by the step's ``transform``: never read from
            universal memory. Agents keep their own PrivateMemory and
            never see another stage's intermediate reasoning.
 
@@ -302,7 +302,7 @@ class SETTOrchestrator:
            EthicalFilter rejects a stage, that agent publishes nothing
            (the filter raises before the write), the remaining stages
            are skipped, and the rejection is returned EXPLICITLY in
-           ``PipelineResult.rejection`` — with the structured fields
+           ``PipelineResult.rejection``: with the structured fields
            (action, score, threshold, principle, reasoning) taken from
            the exception's attributes. It is never written to, nor
            meant to be read from, universal memory.
@@ -343,7 +343,7 @@ class SETTOrchestrator:
             )
 
         # Normalize shorthand and validate the WHOLE pipeline before
-        # executing anything — fail closed, no partial side effects.
+        # executing anything: fail closed, no partial side effects.
         normalized: list[PipelineStep] = [
             step if isinstance(step, PipelineStep) else PipelineStep(domain=step)
             for step in steps
@@ -360,7 +360,7 @@ class SETTOrchestrator:
                 outcomes.append(StageOutcome(domain=step.domain, status="skipped"))
                 continue
 
-            # Explicit data flow — never via universal memory.
+            # Explicit data flow: never via universal memory.
             if step.transform is not None:
                 stage_input = step.transform(input_data, prev_output)
                 if not isinstance(stage_input, dict):

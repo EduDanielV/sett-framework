@@ -16,7 +16,7 @@ The SETT core has **zero mandatory dependencies**. LLM support is optional and i
 ## Installation
 
 ```bash
-# Core framework — no LLM required
+# Core framework: no LLM required
 pip install sett-framework
 
 # With Claude support (recommended)
@@ -42,7 +42,7 @@ Copy and run the following. No API key required for this example.
 from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 
 
-# 1. Define an expert — the most atomic unit in SETT.
+# 1. Define an expert: the most atomic unit in SETT.
 #    It handles exactly one task and writes results to private memory.
 
 class GreetingExpert(SETTExpert):
@@ -53,7 +53,7 @@ class GreetingExpert(SETTExpert):
         return {"greeting": f"Hello, {name}! Welcome to SETT."}
 
 
-# 2. Define an agent — a domain specialist made up of one or more experts.
+# 2. Define an agent: a domain specialist made up of one or more experts.
 #    It coordinates its experts and publishes only the final result outward.
 
 class WelcomeAgent(SETTAgent):
@@ -81,7 +81,7 @@ print(result["greeting"])
 
 ## What just happened
 
-The `GreetingExpert` resolved the task and wrote intermediate state to the agent's **private memory** — a workspace no other component can access.
+The `GreetingExpert` resolved the task and wrote intermediate state to the agent's **private memory**: a workspace no other component can access.
 
 The `WelcomeAgent` took that result and published it to **universal memory** via `_publish_to_universal()`. Before the result was committed, the `EthicalFilter` evaluated it and issued an `ALLOW` verdict.
 
@@ -124,7 +124,7 @@ Every decision the EthicalFilter makes is logged. You can inspect it at any time
 
 ```python
 for entry in orchestrator.get_ethical_audit_log():
-    print(f"[{entry['verdict'].upper()}] {entry['action']} — score: {entry['harm_score']:.2f}")
+    print(f"[{entry['verdict'].upper()}] {entry['action']}: score: {entry['harm_score']:.2f}")
 ```
 
 ---

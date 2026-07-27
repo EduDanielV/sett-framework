@@ -1,12 +1,12 @@
 """
-SETT Framework — ContextAnalyzer
+SETT Framework: ContextAnalyzer
 ==============================
 Evaluates the context of a proposed action using all three layers
 of the SETT hybrid risk system:
 
-  Layer 1 (Action)       — What is about to happen?
-  Layer 2 (User)         — Who is this person right now? (RiskProfile)
-  Layer 3 (Environment)  — What is the state of the space around them?
+  Layer 1 (Action)      : What is about to happen?
+  Layer 2 (User)        : Who is this person right now? (RiskProfile)
+  Layer 3 (Environment) : What is the state of the space around them?
                            (EnvironmentalContext)
 
 The ContextAnalyzer answers WHY we arrived at a potential action,
@@ -19,12 +19,39 @@ The EnvironmentalContext is read from UniversalMemory.
 """
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
     from sett.risk_ruler.risk_profile import RiskProfile
     from sett.risk_ruler.environmental_context import EnvironmentalContext
     from sett.risk_ruler.risk_level import RiskLevel
+
+
+@dataclass(frozen=True, slots=True)
+class SafetyAssessment:
+    """Separates the situation from the proposed action.
+
+    ``situation_urgency`` answers how serious the human context is.
+    ``action_harm_risk`` estimates harm caused by the proposed action.
+    ``omission_risk`` estimates harm caused by not acting.
+    ``protective_action`` marks actions intended to reduce that omission risk.
+
+    The EthicalFilter's verdict is still based on ``ContextAnalysis.risk_score``;
+    domain analyzers decide how these dimensions should affect that score. This
+    prevents the framework from assuming that a severe situation automatically
+    makes a protective action dangerous.
+    """
+
+    situation_urgency: float = 0.0
+    action_harm_risk: float = 0.0
+    omission_risk: float = 0.0
+    protective_action: bool = False
+
+    def __post_init__(self) -> None:
+        for field_name in ("situation_urgency", "action_harm_risk", "omission_risk"):
+            value = getattr(self, field_name)
+            object.__setattr__(self, field_name, max(0.0, min(10.0, float(value))))
 
 
 class ContextAnalysis:
@@ -39,6 +66,7 @@ class ContextAnalysis:
         consequences: list[str],
         human_at_risk: bool = False,
         risk_level: "RiskLevel | None" = None,
+        safety_assessment: SafetyAssessment | None = None,
     ) -> None:
         self.action = action
         self.risk_score = risk_score
@@ -47,6 +75,12 @@ class ContextAnalysis:
         self.consequences = consequences
         self.human_at_risk = human_at_risk
         self.risk_level = risk_level       # environmental layer result
+        self.safety_assessment = safety_assessment or SafetyAssessment(
+            situation_urgency=risk_score if human_at_risk else 0.0,
+            action_harm_risk=risk_score,
+            omission_risk=0.0,
+            protective_action=False,
+        )
         self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def __repr__(self) -> str:
@@ -93,9 +127,9 @@ class ContextAnalyzer:
         """
         Full three-layer analysis of a proposed action.
 
-        Layer 1 — Action analysis: what keywords and data does this action carry?
-        Layer 2 — User analysis: what does the RiskProfile say about this person now?
-        Layer 3 — Environment: what is the EnvironmentalContext of the space?
+        Layer 1: Action analysis: what keywords and data does this action carry?
+        Layer 2: User analysis: what does the RiskProfile say about this person now?
+        Layer 3: Environment: what is the EnvironmentalContext of the space?
 
         Args:
             action: Description of the action about to be executed.
@@ -136,9 +170,19 @@ class ContextAnalyzer:
             base_score + emotional_modifier + profile_modifier + env_modifier
         )
 
-        # ── Detect human at risk ─────────────────────────────────────────────
+        # ── Situation urgency is distinct from action harm ───────────────────
         human_at_risk = self._detect_human_at_risk(
             context, combined_score, risk_profile, environmental_context
+        )
+        biometric_urgency = 4.0 if human_at_risk else 0.0
+        situation_urgency = min(
+            10.0, emotional_modifier + profile_modifier + env_modifier + biometric_urgency
+        )
+        safety_assessment = SafetyAssessment(
+            situation_urgency=situation_urgency,
+            action_harm_risk=combined_score,
+            omission_risk=0.0,
+            protective_action=False,
         )
 
         consequences = self._assess_consequences(action, context, environmental_context)
@@ -156,12 +200,22 @@ class ContextAnalyzer:
             consequences=consequences,
             human_at_risk=human_at_risk,
             risk_level=env_level,
+            safety_assessment=safety_assessment,
         )
 
     def _base_risk_score(self, action: str, context: dict[str, Any]) -> float:
         """Layer 1: keyword-based base risk from the action itself."""
         score = 0.0
-        action_lower = action.lower()
+        # A governed universal-memory write may describe the real proposed
+        # operation in an explicit field. Inspect only those structured fields,
+        # never arbitrary user text, to avoid turning ordinary content into an
+        # accidental action classification.
+        action_parts = [action]
+        for key in ("proposed_action", "action_type"):
+            value = context.get(key)
+            if isinstance(value, str):
+                action_parts.append(value)
+        action_lower = " ".join(action_parts).lower()
 
         high_risk_kw = [
             "emergency", "danger", "harm", "delete", "send_all",
@@ -195,7 +249,7 @@ class ContextAnalyzer:
 
         [Unreleased]: biometric parsing (nested "health" dict vs. flat
         context, vital-sign thresholds) moved to
-        biometric_ruler.BiometricReading — this method no longer reads
+        biometric_ruler.BiometricReading: this method no longer reads
         context["health"]/context["heart_rate_bpm"] itself. Behavior is
         unchanged (same thresholds, same nested/flat fallback introduced
         in v0.1.1); only the parsing moved to a typed data model instead
@@ -244,7 +298,7 @@ class ContextAnalyzer:
         if environmental_context and environmental_context.requires_response:
             consequences.append(
                 f"Action occurs in a {environmental_context.risk_level.label} "
-                f"environment — consequences may be amplified."
+                f"environment: consequences may be amplified."
             )
 
         if not consequences:

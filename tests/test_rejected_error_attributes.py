@@ -3,9 +3,9 @@ Tests for the structured attributes on SETTEthicalFilterRejectedError.
 
 Two guarantees, verified separately:
 
-1. Backward compatibility — str(e) returns exactly the same
+1. Backward compatibility: str(e) returns exactly the same
    human-readable message it always has, byte for byte.
-2. Structured access — .action, .score, .threshold, .principle and
+2. Structured access: .action, .score, .threshold, .principle and
    .reasoning are real attributes with the correct values, so
    downstream code never needs to parse the message string
    (which already caused a real bug: splitting on "." truncated
@@ -90,8 +90,8 @@ class TestStructuredAttributes:
         """
         e = _reject()
         # The message shows the score rounded to 2 decimals; the
-        # attribute must equal the real score, which — when rendered
-        # the same way — matches the message, without the attribute
+        # attribute must equal the real score, which: when rendered
+        # the same way: matches the message, without the attribute
         # itself being a string or a pre-rounded copy.
         assert f"{e.score:.2f}" in str(e)
         assert not isinstance(e.score, str)

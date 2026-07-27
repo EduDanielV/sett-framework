@@ -1,9 +1,9 @@
 """
-SETT Framework — Tests: ElevenLabsTTSAdapter
+SETT Framework: Tests: ElevenLabsTTSAdapter
 ======================================================
 ElevenLabs is a cloud service reached via plain HTTP (no SDK), so
 these tests mock `requests.post` the same way test_ollama_adapter.py
-mocks `urllib.request.urlopen` — no live API key or network access
+mocks `urllib.request.urlopen`: no live API key or network access
 required.
 """
 import pytest
@@ -123,7 +123,7 @@ class TestElevenLabsTTSAdapterErrorHandling:
     def test_error_does_not_leak_raw_requests_exception_type(self, mock_post):
         """
         Callers should only ever need to catch SETTServiceAdapterError,
-        consistent with the LLM adapters — not requests-specific
+        consistent with the LLM adapters: not requests-specific
         exceptions, which would leak an implementation detail.
         """
         import requests as real_requests

@@ -1,11 +1,11 @@
 """
-SETT Framework — Tests: Ethics and Risk System
+SETT Framework: Tests: Ethics and Risk System
 ======================================================
 Tests for the full three-layer hybrid risk evaluation:
 
-  Layer 1 — EthicalFilter (action harm score)
-  Layer 2 — RiskProfile (three-pillar user assessment)
-  Layer 3 — EnvironmentalContext (RiskLevel 0–5)
+  Layer 1: EthicalFilter (action harm score)
+  Layer 2: RiskProfile (three-pillar user assessment)
+  Layer 3: EnvironmentalContext (RiskLevel 0–5)
 
 Key contracts:
   - REJECT always raises SETTEthicalFilterRejectedError
@@ -191,7 +191,7 @@ class TestEnvironmentalContext:
     def test_does_not_contain_personal_data_in_dict(self):
         """
         The serialized form of EnvironmentalContext must never contain
-        personal identifiers — only level, location, source, and message.
+        personal identifiers: only level, location, source, and message.
         """
         ctx = EnvironmentalContext(
             risk_level=RiskLevel.LEVEL_2, location_id="loc"
@@ -289,29 +289,26 @@ class TestEthicalFilter:
         score_high_risk = log[1]["harm_score"]
         assert score_high_risk > score_baseline
 
-    def test_human_at_risk_escalates_score_significantly(self):
-        """
-        When human_at_risk is detected, score escalates close to reject threshold.
-        This test verifies the escalation mechanism works — not that it always rejects.
-        The actual rejection depends on the combination of all three layers.
-        """
+    def test_human_at_risk_promotes_unclassified_benign_action_to_warn(self):
+        """Critical biometrics preserve harm score but require cautious review."""
         f_baseline = EthicalFilter()
         f_biometric = EthicalFilter()
 
-        # Baseline: safe action, no biometrics
         f_baseline.evaluate("memory_write", {})
-        baseline_score = f_baseline.get_audit_log()[0]["harm_score"]
-
-        # With dangerous biometrics: score should escalate significantly
         f_biometric.evaluate(
             "memory_write",
             context={"health": {"heart_rate_bpm": 180, "temperature_celsius": 40.5}},
         )
-        biometric_score = f_biometric.get_audit_log()[0]["harm_score"]
+        baseline = f_baseline.get_audit_log()[0]
+        biometric = f_biometric.get_audit_log()[0]
 
-        # The score with dangerous biometrics must be much higher
-        assert biometric_score > baseline_score
-        assert biometric_score >= 7.0  # escalated close to reject threshold
+        assert biometric["human_at_risk"] is True
+        assert biometric["situation_urgency"] > baseline["situation_urgency"]
+        assert biometric["harm_score"] == baseline["harm_score"]
+        assert biometric["verdict"] == "warn"
+        assert biometric["decision_reason_codes"] == [
+            "human_at_risk_without_protective_classification"
+        ]
 
     def test_three_layers_combined_cause_reject(self):
         """
@@ -320,9 +317,9 @@ class TestEthicalFilter:
 
         crisis (+5.0) + max risk profile (+3.0) = 8.0 = reject threshold → REJECT
 
-        This is intentional design: human_at_risk alone produces a severe WARN
-        (score escalates to threshold - 0.01), but REJECT requires the full
-        combination of factors. This prevents false positives.
+        The generic analyzer may still reject when the proposed action's
+        combined harm score reaches the threshold. Human-at-risk is logged
+        separately and no longer forces a verdict by itself.
         """
         from sett import RiskProfile
         f = EthicalFilter()

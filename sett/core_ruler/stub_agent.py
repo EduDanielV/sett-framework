@@ -1,18 +1,18 @@
 """
-SETT Framework — StubDomainAgent
+SETT Framework: StubDomainAgent
 ==============================
 A placeholder agent for a domain that isn't built yet.
 
 Useful when assembling a multi-agent system incrementally: register a
 StubDomainAgent for every domain your router or synthesizer needs to
 be able to call, so the full turn (dispatch → collect → synthesize)
-is testable end to end from day one — even before the real agents for
+is testable end to end from day one: even before the real agents for
 those domains exist. Swap in the real agent later by registering it
 under the same domain name; nothing else in your system needs to
 change, because callers only ever depend on the domain string, never
 on which concrete agent answers it.
 
-Extracted from a companion-assistant application built on top of SETT — first used to
+Extracted from a companion-assistant application built on top of SETT: first used to
 let a router and a multi-domain synthesizer be built and fully tested
 before any of the six domains they route to had a real implementation.
 
@@ -35,7 +35,7 @@ class StubDomainAgent(SETTAgent):
     structured "not built yet" result instead of crashing or
     fabricating an answer. A downstream synthesizer (e.g. a
     PhrasingExpert-based one) can narrate this as "that feature isn't
-    ready yet" — the same fail-honest spirit as the rest of SETT.
+    ready yet": the same fail-honest spirit as the rest of SETT.
 
     Args:
         domain: The domain key this stub stands in for (e.g. "health").

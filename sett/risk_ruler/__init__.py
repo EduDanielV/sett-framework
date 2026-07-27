@@ -1,1 +1,1 @@
-# SETT Framework — risk_ruler module
+# SETT Framework: risk_ruler module

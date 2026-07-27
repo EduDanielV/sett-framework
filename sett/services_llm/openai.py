@@ -1,9 +1,9 @@
 """
-SETT Framework — OpenAI (GPT) Adapter
+SETT Framework: OpenAI (GPT) Adapter
 ==============================
 LLM adapter for OpenAI's GPT models.
 
-Implements the LLMBase interface — fully interchangeable with
+Implements the LLMBase interface: fully interchangeable with
 AnthropicAdapter or GeminiAdapter.
 
 Requires: pip install sett-framework[openai]

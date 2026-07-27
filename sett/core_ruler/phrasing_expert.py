@@ -1,29 +1,29 @@
 """
-SETT Framework — PhrasingExpert
+SETT Framework: PhrasingExpert
 ==============================
 Base class for any expert whose job includes producing text the user
 will actually read or hear.
 
 This formalizes a pattern that emerged independently twice while
 building a companion-assistant prototype on top of SETT (its greeting expert, and its
-weather-question acknowledgment) — before either one was planned as a
+weather-question acknowledgment): before either one was planned as a
 reusable pattern. That repetition, unplanned, is the signal that this
 belongs in the framework itself, not copy-pasted per project.
 
 The contract:
 
     1. Deterministic logic produces the FACTS (a dict). This never
-       involves the LLM — implement determine_facts().
-    2. The LLM (optional) only PHRASES those facts — it never invents
+       involves the LLM: implement determine_facts().
+    2. The LLM (optional) only PHRASES those facts: it never invents
        them, never alters them, never decides what's true. Implement
        build_prompt() to describe what the LLM should say, based only
        on the facts already computed.
     3. Without an LLM, or if the adapter fails for any reason, falls
-       back to a deterministic text — implement fallback_text(). The
+       back to a deterministic text: implement fallback_text(). The
        LLM is an enhancement, never a requirement for this expert to
        do its job.
     4. The result is RETURNED to the owning Agent; a PhrasingExpert
-       never publishes anything itself — same as every SETTExpert.
+       never publishes anything itself: same as every SETTExpert.
 """
 from __future__ import annotations
 from abc import abstractmethod
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 class PhrasingExpert(SETTExpert):
     """
     Extend this instead of SETTExpert directly whenever your expert's
-    job includes talking to the user — a greeting, an acknowledgment,
+    job includes talking to the user: a greeting, an acknowledgment,
     a synthesized summary, a redacted alert. Anything a human will
     read or hear.
 
@@ -48,23 +48,23 @@ class PhrasingExpert(SETTExpert):
 
         determine_facts(context) -> dict
             Pure deterministic logic. No LLM involved. This is the
-            "what is true" step — e.g. what time of day it is, what
+            "what is true" step: e.g. what time of day it is, what
             habit was detected, what the budget calculation concluded.
 
         build_prompt(facts, context) -> str
             Describes, in natural language, what the LLM should say
             based on the facts already computed. The LLM never sees
             raw context it could misinterpret as license to invent
-            new facts — only what you explicitly put in the prompt.
+            new facts: only what you explicitly put in the prompt.
 
         fallback_text(facts, context) -> str
             The deterministic text to use when there's no LLM
             configured, or when the LLM call fails for any reason.
-            This is what the user gets today, with zero LLM cost —
+            This is what the user gets today, with zero LLM cost:
             the LLM only makes it sound better, never makes it work.
 
     The phrased text is merged into the facts dict under the key named
-    by OUTPUT_KEY (override it per subclass — e.g. "greeting",
+    by OUTPUT_KEY (override it per subclass: e.g. "greeting",
     "acknowledgment", "summary").
 
     Example:
@@ -112,7 +112,7 @@ class PhrasingExpert(SETTExpert):
         phrases them (via LLM if available, else the fallback text),
         and returns both merged together.
 
-        Subclasses should not override this — implement
+        Subclasses should not override this: implement
         determine_facts(), build_prompt(), and fallback_text() instead.
         """
         facts = self.determine_facts(context)
@@ -122,7 +122,7 @@ class PhrasingExpert(SETTExpert):
     @abstractmethod
     def determine_facts(self, context: dict[str, Any]) -> dict[str, Any]:
         """
-        Pure deterministic logic — no LLM involved. Returns the facts
+        Pure deterministic logic: no LLM involved. Returns the facts
         that are true regardless of how they end up being phrased.
         """
         ...
@@ -142,7 +142,7 @@ class PhrasingExpert(SETTExpert):
         """
         The deterministic text used when there's no LLM configured, or
         when the LLM call fails. Must always produce a valid result on
-        its own — this is what makes the LLM optional, not required.
+        its own: this is what makes the LLM optional, not required.
         """
         ...
 
@@ -150,7 +150,7 @@ class PhrasingExpert(SETTExpert):
         """
         Returns LLM-phrased text if an LLM is configured and it
         succeeds; otherwise falls back to fallback_text(). Never
-        raises — a failure here should never stop the agent from
+        raises: a failure here should never stop the agent from
         responding to the user.
         """
         if self._llm is None:

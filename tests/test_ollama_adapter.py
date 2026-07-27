@@ -1,11 +1,11 @@
 """
-SETT Framework — Tests: OllamaAdapter
+SETT Framework: Tests: OllamaAdapter
 ======================================================
 Since Ollama itself is an external local service (not something we can
 assume is installed/running in a test environment), these tests mock
 the HTTP layer rather than requiring a live Ollama server. Real
 end-to-end verification against an actual running Ollama instance
-should be done manually — see templates/README.md-style guidance in
+should be done manually: see templates/README.md-style guidance in
 services_llm/ollama.py's docstring for setup steps.
 """
 import json
@@ -168,7 +168,7 @@ class TestOllamaAdapterErrorHandling:
     def test_error_does_not_leak_raw_urllib_exception_type(self):
         """
         Callers should only ever need to catch SETTLLMAdapterError,
-        consistent with the other adapters — not urllib-specific
+        consistent with the other adapters: not urllib-specific
         exceptions, which would leak an implementation detail.
         """
         with patch("urllib.request.urlopen") as mock_urlopen:

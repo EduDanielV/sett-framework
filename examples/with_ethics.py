@@ -1,12 +1,12 @@
 """
-SETT Framework — Ethical Filter Example
+SETT Framework: Ethical Filter Example
 ==============================
 Demonstrates the EthicalFilter governance layer in four scenarios:
 
-1. ALLOW  — a safe action proceeds normally
-2. WARN   — a borderline action proceeds but is flagged and logged
-3. REJECT — a harmful action is blocked and raises SETTEthicalFilterRejectedError
-4. propose_action() — a side effect is gated BEFORE execution, not just after
+1. ALLOW : a safe action proceeds normally
+2. WARN  : a borderline action proceeds but is flagged and logged
+3. REJECT: a harmful action is blocked and raises SETTEthicalFilterRejectedError
+4. propose_action(): a side effect is gated BEFORE execution, not just after
 
 This is the most important differentiator of SETT:
 no action reaches the outside world without passing an ethical checkpoint.
@@ -20,7 +20,7 @@ examples/multi_agent.py publishes it) instead of nested under "health",
 to demonstrate that the human-at-risk detector now catches both structures.
 
 See examples/with_executor.py for the stronger, structural alternative to
-propose_action() — submitting Actions to a registered SETTExecutor.
+propose_action(): submitting Actions to a registered SETTExecutor.
 
 Run with:
     cd sett-framework
@@ -54,7 +54,7 @@ class AwareContextAnalyzer(ContextAnalyzer):
 
     v0.1.1 fix: analyze() now accepts risk_profile and environmental_context
     and forwards them to the parent implementation. The EthicalFilter always
-    passes these two keyword arguments — any ContextAnalyzer subclass must
+    passes these two keyword arguments: any ContextAnalyzer subclass must
     accept them, even if only to pass them straight through.
     """
 
@@ -106,7 +106,7 @@ class DemoAgent(SETTAgent):
         result = self.get_expert("action").resolve(input_data)
         # This publish call goes through the EthicalFilter.
         # emotional_state and the location's EnvironmentalContext are
-        # forwarded automatically — see SETTAgent._publish_to_universal().
+        # forwarded automatically: see SETTAgent._publish_to_universal().
         self._publish_to_universal(result)
         return result
 
@@ -115,7 +115,7 @@ class SideEffectAgent(SETTAgent):
     """
     Demo agent that performs a real side effect (simulated here as a
     print statement standing in for "send an SMS" / "call an API").
-    Uses propose_action() to gate the side effect BEFORE it runs — this
+    Uses propose_action() to gate the side effect BEFORE it runs: this
     is what _publish_to_universal() alone does NOT do, since it only
     evaluates a result that already happened.
     """
@@ -125,9 +125,9 @@ class SideEffectAgent(SETTAgent):
 
     def process(self, input_data):
         # Gate the side effect BEFORE performing it.
-        # Raises SETTEthicalFilterRejectedError if blocked — the SMS is
+        # Raises SETTEthicalFilterRejectedError if blocked: the SMS is
         # never actually "sent" in that case.
-        self.propose_action("send_sms", action_context=input_data)
+        self.propose_action("send_all_private_data", action_context=input_data)
 
         # Only reached if propose_action() did not raise:
         simulated_result = {"sms_sent": True, "to": input_data.get("to")}
@@ -157,12 +157,12 @@ def run_scenario(title, orchestrator, domain, context, emotional_state="unknown"
 if __name__ == "__main__":
 
     print("══════════════════════════════════════════════════════")
-    print("  SETT EthicalFilter — Four Scenarios")
+    print("  SETT EthicalFilter: Four Scenarios")
     print("══════════════════════════════════════════════════════")
 
     # ── Scenario 1: ALLOW ────────────────────────────────────────────────────
 
-    print("\n[SCENARIO 1] Normal action — expected: ALLOW")
+    print("\n[SCENARIO 1] Normal action: expected: ALLOW")
 
     orchestrator_1 = SETTOrchestrator(
         ethical_filter=EthicalFilter(
@@ -181,11 +181,15 @@ if __name__ == "__main__":
 
     # ── Scenario 2: WARN ─────────────────────────────────────────────────────
 
-    print("\n[SCENARIO 2] Borderline action — expected: WARN")
+    print("\n[SCENARIO 2] Borderline action: expected: WARN")
+
+    warning_ruleset = default_ruleset()
+    warning_ruleset.warn_threshold = 4.0
 
     orchestrator_2 = SETTOrchestrator(
         ethical_filter=EthicalFilter(
-            context_analyzer=AwareContextAnalyzer(emotional_state="distressed")
+            ruleset=warning_ruleset,
+            context_analyzer=AwareContextAnalyzer(emotional_state="distressed"),
         )
     )
     orchestrator_2.register_agent(
@@ -198,12 +202,12 @@ if __name__ == "__main__":
         context={"recipient": "family", "message": "I need help"},
     )
 
-    # ── Scenario 3: REJECT via biometrics (flat keys, the realistic case) ───
-    # Same shape multi_agent.py publishes: heart_rate_bpm/temperature_celsius
-    # at the TOP LEVEL, not nested under a "health" key. This previously
-    # never triggered human_at_risk — now it does.
+    # ── Scenario 3: REJECT a harmful action in an urgent situation ─────────
+    # The biometric values mark situation urgency. The proposed publication is
+    # independently harmful; a protective emergency response should instead use
+    # a domain analyzer that models action harm and omission risk separately.
 
-    print("\n[SCENARIO 3] Dangerous biometrics (flat keys) — expected: REJECT (demo)")
+    print("\n[SCENARIO 3] Harmful disclosure during urgent biometrics: expected: REJECT")
 
     strict_ruleset = default_ruleset()
     strict_ruleset.reject_threshold = 4.0  # lowered for demo purposes
@@ -216,24 +220,24 @@ if __name__ == "__main__":
         )
     )
     orchestrator_3.register_agent(
-        DemoAgent(domain="emergency", action_type="call_911")
+        DemoAgent(domain="privacy", action_type="publish_private_medical_data")
     )
     run_scenario(
-        title="Emergency call triggered while user is in crisis state",
+        title="Publishing private medical data while the user is in crisis",
         orchestrator=orchestrator_3,
-        domain="emergency",
+        domain="privacy",
         context={
             "heart_rate_bpm": 170,
             "temperature_celsius": 40.1,
         },
     )
 
-    # ── Scenario 4: propose_action() — gating a side effect BEFORE it runs ──
+    # ── Scenario 4: propose_action(): gating a side effect BEFORE it runs ──
     # _publish_to_universal() only evaluates a result AFTER something
     # happened. propose_action() evaluates BEFORE the side effect executes,
     # so a rejected action never actually runs.
 
-    print("\n[SCENARIO 4] Side effect gated before execution — expected: REJECT")
+    print("\n[SCENARIO 4] Side effect gated before execution: expected: REJECT")
 
     orchestrator_4 = SETTOrchestrator(
         ethical_filter=EthicalFilter(
@@ -243,7 +247,7 @@ if __name__ == "__main__":
     )
     orchestrator_4.register_agent(SideEffectAgent())
     run_scenario(
-        title="Attempting to send an SMS while the user is in crisis",
+        title="Attempting to send all private data while the user is in crisis",
         orchestrator=orchestrator_4,
         domain="side_effect",
         context={"to": "+54 9 11 0000 0000", "message": "test"},
@@ -258,8 +262,8 @@ if __name__ == "__main__":
     for label, orchestrator in [
         ("Scenario 1 (ALLOW)", orchestrator_1),
         ("Scenario 2 (WARN)", orchestrator_2),
-        ("Scenario 3 (REJECT — biometrics)", orchestrator_3),
-        ("Scenario 4 (REJECT — pre-execution gate)", orchestrator_4),
+        ("Scenario 3 (REJECT: harmful disclosure)", orchestrator_3),
+        ("Scenario 4 (REJECT: pre-execution gate)", orchestrator_4),
     ]:
         print(f"\n  {label}:")
         for entry in orchestrator.get_ethical_audit_log():

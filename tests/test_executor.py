@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: Executor and Action
+SETT Framework: Tests: Executor and Action
 ======================================================
 Tests for the "actions as data" pattern: Action, SETTExecutor, and
 SETTAgent.submit_action().
@@ -79,7 +79,7 @@ class TestAction:
         assert a.proposed_by == "notifications"
 
     def test_action_repr_does_not_leak_payload(self):
-        """repr() should not dump the full payload — keep logs terse and safe."""
+        """repr() should not dump the full payload: keep logs terse and safe."""
         a = Action(action_type="send_sms", payload={"to": "+54911234567"}, proposed_by="notifications")
         r = repr(a)
         assert "send_sms" in r
@@ -91,17 +91,19 @@ class TestAction:
 
 class TestSETTExecutorUnit:
 
-    def test_register_handler_and_submit_without_filter(self):
-        """Executor with no universal memory attached should still execute (fail-open, matches update() behavior)."""
+    def test_submit_without_orchestrator_fails_closed(self):
+        """An unattached Executor must never run a real handler."""
         calls = []
         executor = SETTExecutor()
         executor.register_handler("noop", make_handler(calls))
-        result = executor.submit(Action(action_type="noop", payload={"x": 1}))
-        assert result == {"handled": True, "payload": {"x": 1}}
-        assert calls == [{"x": 1}]
+        with pytest.raises(SETTConfigurationError) as exc_info:
+            executor.submit(Action(action_type="noop", payload={"x": 1}))
+        assert "not attached" in str(exc_info.value)
+        assert calls == []
 
     def test_missing_handler_raises_configuration_error(self):
         executor = SETTExecutor()
+        SETTOrchestrator().register_executor(executor)
         with pytest.raises(SETTConfigurationError) as exc_info:
             executor.submit(Action(action_type="unregistered_type"))
         assert "unregistered_type" in str(exc_info.value)
@@ -110,6 +112,7 @@ class TestSETTExecutorUnit:
         calls = []
         executor = SETTExecutor()
         executor.register_handler("registered", make_handler(calls))
+        SETTOrchestrator().register_executor(executor)
         with pytest.raises(SETTConfigurationError):
             executor.submit(Action(action_type="different_type"))
         assert calls == []  # the registered handler for a DIFFERENT type never ran
@@ -128,6 +131,7 @@ class TestSETTExecutorUnit:
         calls = []
         executor = SETTExecutor()
         executor.register_handler("ok_type", make_handler(calls))
+        SETTOrchestrator().register_executor(executor)
         executor.submit(Action(action_type="ok_type", proposed_by="agent_a"))
         log = executor.get_audit_log()
         assert len(log) == 1
@@ -136,6 +140,7 @@ class TestSETTExecutorUnit:
 
     def test_audit_log_does_not_record_failed_configuration_attempts(self):
         executor = SETTExecutor()
+        SETTOrchestrator().register_executor(executor)
         with pytest.raises(SETTConfigurationError):
             executor.submit(Action(action_type="nonexistent"))
         assert executor.get_audit_log() == []

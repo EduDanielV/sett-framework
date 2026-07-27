@@ -1,5 +1,5 @@
 """
-SETT Framework — SETTExecutor
+SETT Framework: SETTExecutor
 ==============================
 The only component in a SETT system that is allowed to perform real
 side effects (send a message, call an external API, contact emergency
@@ -10,31 +10,30 @@ describe intent as an Action and submit it here. The Executor:
 
     1. Receives the Action
     2. Runs it through the EthicalFilter (Layer 1 action / Layer 2 user /
-       Layer 3 environment — the same three-layer system used everywhere
+       Layer 3 environment: the same three-layer system used everywhere
        else in SETT)
-    3. If approved: invokes the handler registered for that action_type —
+    3. If approved: invokes the handler registered for that action_type:
        this is the ONLY place the real side effect happens
     4. Returns the handler's result upward, so the Orchestrator (and from
        there, the application built on SETT) can incorporate
        it into the system's response
 
-This is the structural alternative to SETTAgent.propose_action(): where
-propose_action() only asks the developer to remember to call it before
-doing the real thing themselves, submitting an Action through the
-Executor makes it physically impossible to perform the effect any other
-way, because the expert never holds a reference to the real client.
+Submitting an Action through the Executor provides the structural gate:
+the expert never receives a reference to the real client. The Executor
+also fails closed when it is not attached to an orchestrator, when the
+shared memory has no EthicalFilter, when approval is rejected, or when no
+handler is registered.
 
-Both mechanisms are supported in SETT and are not mutually exclusive:
-- propose_action() — lightweight, no setup required, good for
-  prototyping or low-stakes side effects.
-- SETTExecutor + Action — more setup (register a handler once), but a
-  structural guarantee for your highest-stakes side effects (the ones
-  where "the developer forgot to call the gate" is not an acceptable
-  failure mode — emergency calls, payments, contacting a doctor, etc.)
+``SETTAgent.propose_action()`` remains available for evaluating an action
+without executing it. It now also requires orchestrator wiring; standalone
+silent approval is not permitted.
 """
 from __future__ import annotations
 from typing import Any, Callable, TYPE_CHECKING
+from copy import deepcopy
 import logging
+
+from sett.audit_ruler.chain import append_chained_entry, verify_chain
 
 from sett.core_ruler.action import Action
 from sett.exceptions import SETTConfigurationError
@@ -120,24 +119,34 @@ class SETTExecutor:
         Raises:
             SETTEthicalFilterRejectedError: If the EthicalFilter blocks
                 the action. The handler is NEVER called in that case.
-            SETTConfigurationError: If no handler is registered for this
-                action_type. The action is never executed in that case
-                either — a missing handler fails closed, not open.
+            SETTConfigurationError: If the Executor is unattached, its
+                memory has no EthicalFilter, or no handler is registered for
+                this action type. Every configuration error fails closed.
         """
-        environmental_context = None
-        if self._universal_memory is not None:
-            environmental_context = self._universal_memory.read_environmental_context(
-                location_id
+        if self._universal_memory is None:
+            raise SETTConfigurationError(
+                "SETTExecutor is not attached to a SETTOrchestrator. "
+                "Register it with orchestrator.register_executor(executor) "
+                "before submitting any action."
             )
-            # This raises SETTEthicalFilterRejectedError if rejected —
-            # the handler below is only reached if it does not raise.
-            self._universal_memory.evaluate_action(
-                action=action.action_type,
-                context={**action.payload, "_proposed_by": action.proposed_by},
-                emotional_state=emotional_state,
-                risk_profile=risk_profile,
-                environmental_context=environmental_context,
+        if not self._universal_memory.has_ethical_filter:
+            raise SETTConfigurationError(
+                "SETTExecutor cannot run because its UniversalMemory has no "
+                "EthicalFilter. Real-world actions fail closed by default."
             )
+
+        environmental_context = self._universal_memory.read_environmental_context(
+            location_id
+        )
+        # This raises SETTEthicalFilterRejectedError if rejected:
+        # the handler below is only reached if it does not raise.
+        self._universal_memory.evaluate_action(
+            action=action.action_type,
+            context={**deepcopy(action.payload), "_proposed_by": action.proposed_by},
+            emotional_state=emotional_state,
+            risk_profile=risk_profile,
+            environmental_context=environmental_context,
+        )
 
         handler = self._handlers.get(action.action_type)
         if handler is None:
@@ -152,9 +161,9 @@ class SETTExecutor:
             "[Executor] Executing approved action '%s' (proposed by '%s')",
             action.action_type, action.proposed_by,
         )
-        result = handler(action.payload)
+        result = handler(deepcopy(action.payload))
 
-        self._audit_log.append({
+        append_chained_entry(self._audit_log, {
             "action_type": action.action_type,
             "proposed_by": action.proposed_by,
             "timestamp": action.timestamp,
@@ -166,9 +175,13 @@ class SETTExecutor:
         """
         Log of every action that was actually executed (i.e. approved by
         the filter AND had a registered handler). Rejected or unhandled
-        actions do not appear here — they never ran.
+        actions do not appear here: they never ran.
         """
-        return list(self._audit_log)
+        return deepcopy(self._audit_log)
+
+    def verify_audit_log(self) -> bool:
+        """Verify sequence and hash links in the internal execution log."""
+        return verify_chain(self._audit_log)
 
     @property
     def registered_action_types(self) -> list[str]:

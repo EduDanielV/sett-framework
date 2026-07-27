@@ -1,5 +1,5 @@
 """
-SETT Framework — RiskProfile
+SETT Framework: RiskProfile
 ==============================
 The user assessment layer of the SETT hybrid risk system.
 
@@ -7,7 +7,7 @@ A RiskProfile evaluates the STATE OF A SPECIFIC USER at a given moment
 using three independent pillars. It is stored in the agent's PrivateMemory
 and influences how the EthicalFilter weighs its decisions.
 
-This is NOT a permanent label — it is a dynamic, moment-to-moment evaluation
+This is NOT a permanent label: it is a dynamic, moment-to-moment evaluation
 that changes as the user's situation changes. A person in crisis today
 may have a completely different profile tomorrow.
 
@@ -15,13 +15,13 @@ The three pillars (inspired by the SGR-IC concept and Beatless):
 
   1. emotional_instability (0.0–1.0)
      How likely the user is to act irrationally, violently, or self-destructively
-     under their current stress level. NOT a moral judgment — a contextual signal.
+     under their current stress level. NOT a moral judgment: a contextual signal.
      Example: 0.9 = user is in acute emotional crisis.
 
   2. influence_vulnerability (0.0–1.0)
      How susceptible the user is to external manipulation or social engineering
      in their current state. High vulnerability means their decisions may not
-     fully reflect their own intentions — they may be being influenced.
+     fully reflect their own intentions: they may be being influenced.
      Example: 0.7 = user shows signs of distress-driven decision making.
 
   3. collateral_damage_potential (0.0–1.0)
@@ -34,8 +34,8 @@ The three pillars (inspired by the SGR-IC concept and Beatless):
 Privacy note:
     RiskProfile values are stored exclusively in PrivateMemory.
     They are NEVER published directly to UniversalMemory.
-    Only the resulting RiskLevel (environmental context) is shared —
-    and without any identifying information about the individual.
+    Only the resulting RiskLevel (environmental context) is shared,
+    without any identifying information about the individual.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -129,7 +129,7 @@ class RiskProfile:
     def suggested_level(self) -> RiskLevel:
         """
         Suggests an environmental RiskLevel based on the composite score.
-        This is a recommendation — the orchestrator makes the final decision.
+        This is a recommendation: the orchestrator makes the final decision.
 
         Score → Level:
             0.00–0.15  → LEVEL_0 (Normal)

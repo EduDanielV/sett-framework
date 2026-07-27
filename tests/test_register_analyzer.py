@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: register_analyzer
+SETT Framework: Tests: register_analyzer
 ======================================================
 Tests for per-action-type ContextAnalyzer registration on EthicalFilter
 (resolves the "two projects,
@@ -73,7 +73,7 @@ class TestRegisterAnalyzer:
         filt.register_analyzer("confirm_purchase", AlwaysMaxAnalyzer())
         filt.unregister_analyzer("confirm_purchase")
 
-        # Back to generic — a plain action string shouldn't trigger REJECT anymore
+        # Back to generic: a plain action string shouldn't trigger REJECT anymore
         verdict = filt.evaluate(action="confirm_purchase", context={})
         assert verdict.value == "allow"
 

@@ -1,8 +1,8 @@
 """
-SETT Framework — Tests: GoogleSentimentAdapter
+SETT Framework: Tests: GoogleSentimentAdapter
 ======================================================
 google-cloud-language is an optional dependency (pip install
-sett-framework[google-sentiment]) — not installed in this test
+sett-framework[google-sentiment]): not installed in this test
 environment, same situation as the TTS/STT Google adapters. See
 test_google_tts_stt_adapters.py's module docstring for why sys.modules
 injection (not mocking an installed SDK) is the testing strategy here,
@@ -17,7 +17,7 @@ from sett.services_sentiment.base import SentimentResult, SentenceSentiment
 
 
 def _fake_google_cloud_sys_modules(submodule_name: str, submodule_mock: MagicMock) -> dict:
-    """Same construction as test_google_tts_stt_adapters.py — see that
+    """Same construction as test_google_tts_stt_adapters.py: see that
     file for why the parent attribute must be set explicitly."""
     google_cloud_mock = MagicMock(name="google.cloud")
     setattr(google_cloud_mock, submodule_name, submodule_mock)

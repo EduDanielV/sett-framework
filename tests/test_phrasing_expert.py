@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: PhrasingExpert
+SETT Framework: Tests: PhrasingExpert
 ======================================================
 Tests for the base class that formalizes the "LLM only phrases,
 never invents" pattern found independently twice in an early prototype.
@@ -50,7 +50,7 @@ class BrokenLLM(LLMBase):
 
 
 class EmptyStringLLM(LLMBase):
-    """Returns an empty/whitespace-only string — should also fall back."""
+    """Returns an empty/whitespace-only string: should also fall back."""
     @property
     def model_name(self):
         return "empty"

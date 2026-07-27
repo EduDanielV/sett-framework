@@ -1,9 +1,9 @@
 """
-SETT Framework — PrivateMemory
+SETT Framework: PrivateMemory
 ==============================
 Each agent has its own private memory.
 Only the agent's experts can write to it.
-The orchestrator has NO access to private memory — by design.
+The orchestrator has NO access to private memory: by design.
 
 This is one of the two core memory layers of SETT.
 """
@@ -24,7 +24,7 @@ class PrivateMemory:
     - The agent uses this memory to compose its final result before
       publishing to UniversalMemory.
 
-    Inspired by an early prototype's memory.py — simplified and made agent-specific.
+    Inspired by an early prototype's memory.py: simplified and made agent-specific.
     """
 
     def __init__(self, owner: str):

@@ -1,5 +1,5 @@
 """
-SETT Framework — Tests: Orchestrator, Agent, Expert
+SETT Framework: Tests: Orchestrator, Agent, Expert
 ======================================================
 Unit tests for the core_ruler layer.
 
@@ -18,6 +18,7 @@ from sett import (
     EthicalFilter,
     SETTAgentNotFoundError,
     SETTExpertNotFoundError,
+    SETTConfigurationError,
 )
 
 
@@ -135,20 +136,19 @@ class TestSETTAgent:
             agent.get_expert("nonexistent")
         assert "nonexistent" in str(exc_info.value)
 
-    def test_agent_process_returns_dict(self):
+    def test_agent_process_returns_dict_when_registered(self):
         agent = SimpleAgent()
-        result = agent.process({})
+        orchestrator = SETTOrchestrator()
+        orchestrator.register_agent(agent)
+        result = orchestrator.process({}, domain="test")
         assert isinstance(result, dict)
 
-    def test_agent_does_not_publish_without_universal_memory(self):
-        """
-        Agent should not crash if process() is called before
-        attach_universal_memory(). PrivateMemory still works.
-        """
+    def test_agent_publish_without_universal_memory_fails_closed(self):
+        """A publish-capable agent must be registered before process()."""
         agent = SimpleAgent()
         assert agent._universal_memory is None
-        result = agent.process({})
-        assert result is not None  # should not raise
+        with pytest.raises(SETTConfigurationError):
+            agent.process({})
 
     def test_agent_private_memory_is_not_accessible_from_outside(self):
         """

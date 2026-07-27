@@ -1,18 +1,22 @@
 """
-SETT Framework — UniversalMemory
+SETT Framework: UniversalMemory
 ==============================
 Shared memory accessible by the orchestrator and all agents.
 
-Agents publish ONLY their final results here — not internal reasoning.
+Agents publish ONLY their final results here: not internal reasoning.
 Every write passes through the EthicalFilter if one is configured.
 
-Also handles EnvironmentalContext — the shared risk state that
+Also handles EnvironmentalContext: the shared risk state that
 multiple SETT instances in the same location can read and publish.
 """
 from __future__ import annotations
 from typing import Any, TYPE_CHECKING
+from copy import deepcopy
 from datetime import datetime, timezone
 import threading
+
+from sett.audit_ruler.chain import append_chained_entry, verify_chain
+from sett.exceptions import SETTConfigurationError
 
 if TYPE_CHECKING:
     from sett.ethics_ruler.ethic_kernel.filter import EthicalFilter
@@ -29,10 +33,10 @@ class UniversalMemory:
 
     Two types of data live here:
 
-    1. Agent results — published via update(), read via read()/read_all().
+    1. Agent results: published via update(), read via read()/read_all().
        Each agent publishes its final result under its domain name.
 
-    2. Environmental context — published via publish_environmental_context(),
+    2. Environmental context: published via publish_environmental_context(),
        read via read_environmental_context().
        Used for multi-instance coordination (the "warehouse scenario"):
        one SETT instance publishes a RiskLevel for a location,
@@ -66,7 +70,7 @@ class UniversalMemory:
         Passes through the EthicalFilter before being committed.
 
         v0.1.1 fix: previously this only passed action="memory_write" and
-        a context wrapped as {"agent": agent, "result": result} — so (a)
+        a context wrapped as {"agent": agent, "result": result}: so (a)
         emotional_state/risk_profile/environmental_context never reached
         the filter in the real flow (they silently defaulted every time),
         and (b) detectors that read biometric data expected keys directly
@@ -90,9 +94,10 @@ class UniversalMemory:
                 environmental_context=environmental_context,
             )
 
+        safe_result = deepcopy(result)
         with self._lock:
-            self._store[agent] = result
-            self._history.append({
+            self._store[agent] = safe_result
+            append_chained_entry(self._history, {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "agent": agent,
                 "action": "update",
@@ -108,35 +113,41 @@ class UniversalMemory:
     ) -> None:
         """
         Evaluate a real-world side effect through the EthicalFilter BEFORE
-        it is executed — used by SETTAgent.propose_action() and by
+        it is executed: used by SETTAgent.propose_action() and by
         SETTExecutor.submit(). Unlike update(), this does not write
         anything to universal memory; it only runs the action through the
         filter and lets a rejection propagate as
         SETTEthicalFilterRejectedError.
 
-        If no EthicalFilter is configured, this is a no-op (fail-open),
-        matching the existing behavior of update() when no filter is set.
+        Action evaluation is fail-closed: unlike plain memory storage, a
+        proposed side effect cannot be approved without an EthicalFilter.
         """
-        if self._ethical_filter is not None:
-            self._ethical_filter.evaluate(
-                action=action,
-                context=context,
-                emotional_state=emotional_state,
-                risk_profile=risk_profile,
-                environmental_context=environmental_context,
+        if self._ethical_filter is None:
+            raise SETTConfigurationError(
+                "Cannot evaluate a real-world action without an EthicalFilter. "
+                "Attach this UniversalMemory to a SETTOrchestrator or call "
+                "set_ethical_filter() before proposing actions."
             )
+        self._ethical_filter.evaluate(
+            action=action,
+            context=deepcopy(context),
+            emotional_state=emotional_state,
+            risk_profile=risk_profile,
+            environmental_context=environmental_context,
+        )
 
     def read(self, agent: str, default: Any = None) -> Any:
-        """Read the latest published result from a specific agent."""
-        return self._store.get(agent, default)
+        """Read a defensive copy of one agent's latest published result."""
+        with self._lock:
+            return deepcopy(self._store.get(agent, default))
 
     def read_all(self) -> dict[str, dict[str, Any]]:
         """Snapshot of all agent results. Used by the orchestrator."""
         with self._lock:
-            return {
+            return deepcopy({
                 k: v for k, v in self._store.items()
                 if not k.startswith(_ENV_CONTEXT_PREFIX)
-            }
+            })
 
     # ── Environmental context (multi-instance coordination) ──────────────────
 
@@ -147,15 +158,15 @@ class UniversalMemory:
         Publish an EnvironmentalContext to a shared location slot.
 
         Any SETT instance that reads this location key will receive
-        the current risk level — without any personal data attached.
+        the current risk level: without any personal data attached.
 
         Args:
             context: The EnvironmentalContext to publish.
         """
         key = f"{_ENV_CONTEXT_PREFIX}{context.location_id}"
         with self._lock:
-            self._store[key] = context.to_dict()
-            self._history.append({
+            self._store[key] = deepcopy(context.to_dict())
+            append_chained_entry(self._history, {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "action": "env_context_update",
                 "location_id": context.location_id,
@@ -176,7 +187,8 @@ class UniversalMemory:
         """
         from sett.risk_ruler.environmental_context import EnvironmentalContext
         key = f"{_ENV_CONTEXT_PREFIX}{location_id}"
-        data = self._store.get(key)
+        with self._lock:
+            data = deepcopy(self._store.get(key))
         if data is None:
             return None
         return EnvironmentalContext.from_dict(data)
@@ -191,12 +203,23 @@ class UniversalMemory:
             for key, data in self._store.items():
                 if key.startswith(_ENV_CONTEXT_PREFIX):
                     location_id = key[len(_ENV_CONTEXT_PREFIX):]
-                    result[location_id] = EnvironmentalContext.from_dict(data)
+                    result[location_id] = EnvironmentalContext.from_dict(deepcopy(data))
         return result
 
     def get_history(self) -> list[dict[str, Any]]:
-        """Full write history for auditing and debugging."""
-        return list(self._history)
+        """Defensive snapshot of the tamper-evident write history."""
+        with self._lock:
+            return deepcopy(self._history)
+
+    def verify_history(self) -> bool:
+        """Verify sequence and hash links in the internal write history."""
+        with self._lock:
+            return verify_chain(self._history)
+
+    @property
+    def has_ethical_filter(self) -> bool:
+        """Whether real-world action evaluation can be governed safely."""
+        return self._ethical_filter is not None
 
     def __repr__(self) -> str:
         agents = [k for k in self._store if not k.startswith(_ENV_CONTEXT_PREFIX)]

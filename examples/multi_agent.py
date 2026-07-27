@@ -1,5 +1,5 @@
 """
-SETT Framework — Multi-Agent Example
+SETT Framework: Multi-Agent Example
 ==============================
 A SETT system with multiple specialized agents working under one orchestrator.
 
@@ -227,7 +227,7 @@ if __name__ == "__main__":
 
     print(f"Registered agents: {orchestrator.registered_domains}\n")
 
-    # Simulate user context — in a real deployment this would come from
+    # Simulate user context: in a real deployment this would come from
     # wearable sensors, user profile, and location services
     user_context = {
         "heart_rate_bpm": 88,
@@ -244,7 +244,7 @@ if __name__ == "__main__":
         for key, value in result.items():
             print(f"  {key}: {value}")
 
-    # Universal memory — everything the orchestrator knows
+    # Universal memory: everything the orchestrator knows
     print("\n── Universal Memory snapshot ───────────────────")
     memory = orchestrator.read_universal_memory()
     for domain, state in memory.items():

@@ -1,5 +1,5 @@
 """
-SETT Framework — SETTAgent
+SETT Framework: SETTAgent
 ==============================
 An agent is a domain specialist composed of multiple experts.
 
@@ -16,7 +16,7 @@ v0.1.1 fix: the orchestrator now sets self._current_emotional_state and
 self._current_location_id on the agent right before calling process().
 _publish_to_universal() reads them automatically and forwards them to the
 EthicalFilter, together with the location's EnvironmentalContext (if any).
-No existing agent subclass needs to change — process() and
+No existing agent subclass needs to change: process() and
 _publish_to_universal(result) keep their original signatures.
 
 v0.2.0: two mechanisms are now available for real-world side effects
@@ -24,14 +24,14 @@ v0.2.0: two mechanisms are now available for real-world side effects
 services, etc.), which the EthicalFilter does NOT automatically intercept
 just because a result was published to universal memory:
 
-- propose_action() — lightweight, opt-in. The developer calls it manually
+- propose_action(): lightweight, opt-in. The developer calls it manually
   before performing the effect themselves. No setup required.
-- submit_action() — stronger, structural guarantee via a registered
+- submit_action(): stronger, structural guarantee via a registered
   SETTExecutor. The agent never touches the real client; it only
   describes intent as an Action. Requires an Executor with a handler
   registered for that action_type. See sett/core_ruler/executor.py.
 
-Both are supported and not mutually exclusive — use propose_action() for
+Both are supported and not mutually exclusive: use propose_action() for
 quick/low-stakes effects, submit_action() for the ones where "the
 developer forgot to gate it" is not an acceptable failure mode.
 """
@@ -78,7 +78,7 @@ class SETTAgent(ABC):
                 return final
 
     Side effects (sending a message, calling an external API, executing a
-    payment, etc.) are NOT automatically intercepted by the EthicalFilter —
+    payment, etc.) are NOT automatically intercepted by the EthicalFilter:
     the filter only evaluates what gets published to universal memory.
     If your expert performs a real side effect, gate it explicitly, using
     either propose_action() or submit_action() (see module docstring).
@@ -104,7 +104,7 @@ class SETTAgent(ABC):
         self._current_location_id: str = "global"
 
         # Set by the orchestrator via attach_executor() if a SETTExecutor
-        # was registered. None means no Executor is configured — in that
+        # was registered. None means no Executor is configured: in that
         # case submit_action() raises SETTConfigurationError, since a
         # missing Executor should fail closed, not silently no-op.
         self._executor: "SETTExecutor | None" = None
@@ -169,18 +169,21 @@ class SETTAgent(ABC):
         Automatically forwards the current emotional_state (set by the
         orchestrator before calling process()) and the EnvironmentalContext
         for the agent's current location, so the full three-layer risk
-        system is actually exercised in the real flow — not just in tests.
+        system is actually exercised in the real flow: not just in tests.
 
         Call this at the end of process() before returning.
 
         Args:
             result: The final synthesized result of this agent's work.
             risk_profile: Optional three-pillar RiskProfile computed by this
-                agent for the current user. Used only to evaluate this write —
+                agent for the current user. Used only to evaluate this write:
                 it is never stored in universal memory (privacy contract).
         """
         if self._universal_memory is None:
-            return
+            raise SETTConfigurationError(
+                f"Agent '{self.name}' cannot publish because it is not attached "
+                "to a SETTOrchestrator. Register the agent before process()."
+            )
 
         environmental_context = self._universal_memory.read_environmental_context(
             self._current_location_id
@@ -201,7 +204,7 @@ class SETTAgent(ABC):
     ) -> None:
         """
         Gate a real-world side effect through the EthicalFilter BEFORE it
-        is executed — as opposed to _publish_to_universal(), which only
+        is executed: as opposed to _publish_to_universal(), which only
         evaluates the result AFTER an action already happened.
 
         Call this from within resolve()/process(), before performing any
@@ -224,7 +227,10 @@ class SETTAgent(ABC):
                 The side effect must NOT be executed in that case.
         """
         if self._universal_memory is None:
-            return
+            raise SETTConfigurationError(
+                f"Agent '{self.name}' cannot propose action '{action}' because "
+                "it is not attached to a SETTOrchestrator."
+            )
 
         environmental_context = self._universal_memory.read_environmental_context(
             self._current_location_id
@@ -256,7 +262,7 @@ class SETTAgent(ABC):
         Requires a SETTExecutor to be registered with the orchestrator
         (via orchestrator.register_executor(executor)) with a handler
         for this action_type already registered. If either is missing,
-        this fails closed — no side effect happens.
+        this fails closed: no side effect happens.
 
         Args:
             action_type: Must match a handler registered on the Executor

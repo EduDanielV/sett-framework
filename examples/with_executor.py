@@ -1,5 +1,5 @@
 """
-SETT Framework — Executor Example
+SETT Framework: Executor Example
 ==============================
 Demonstrates the "actions as data" pattern using SETTExecutor: the
 structural alternative to SETTAgent.propose_action().
@@ -7,12 +7,12 @@ structural alternative to SETTAgent.propose_action().
 The core idea: an expert never calls the real client (an SMS provider,
 an emergency-services API, a payment gateway) directly. It only
 describes what it wants to happen as an Action. The SETTExecutor is
-the ONLY component that can turn that description into a real effect —
+the ONLY component that can turn that description into a real effect,
 and only after the EthicalFilter approves it.
 
 This closes a gap that propose_action() alone does not: with
 propose_action(), the developer must remember to call the gate before
-performing the effect themselves — nothing stops them from forgetting.
+performing the effect themselves: nothing stops them from forgetting.
 With the Executor, the expert never holds a reference to the real
 client at all, so there is no "forgot to gate it" failure mode: the
 only path to the real side effect runs through the filter.
@@ -38,7 +38,7 @@ from sett import (
 # In a real system these would be a Twilio client, a hospital's emergency
 # API, a payments SDK, etc. They are defined here, OUTSIDE any expert or
 # agent, and only ever called from inside a handler registered with the
-# Executor — never from expert/agent code directly.
+# Executor: never from expert/agent code directly.
 
 def real_sms_client(payload: dict) -> dict:
     print(f"    📱 [SMS PROVIDER] Sending to {payload.get('to')}: "
@@ -57,7 +57,7 @@ def real_emergency_services_client(payload: dict) -> dict:
 class NotifyExpert(SETTExpert):
     """
     Decides WHAT should happen, but never performs it. It only writes
-    intent to private memory — the agent turns that intent into an
+    intent to private memory: the agent turns that intent into an
     Action and submits it to the Executor.
     """
 
@@ -71,7 +71,7 @@ class NotifyExpert(SETTExpert):
 class NotificationAgent(SETTAgent):
     """
     Uses submit_action() instead of calling an SMS client directly.
-    This agent's code has NO import of any SMS SDK — it physically
+    This agent's code has NO import of any SMS SDK: it physically
     cannot send a message except through the registered Executor.
     """
 
@@ -92,7 +92,7 @@ class NotificationAgent(SETTAgent):
 class EmergencyAgent(SETTAgent):
     """
     A higher-stakes example: this agent can request that emergency
-    services be dispatched, but — just like NotificationAgent — it has
+    services be dispatched, but, just like NotificationAgent, it has
     no code path that reaches a real emergency API except through the
     Executor, gated by the EthicalFilter.
     """
@@ -120,12 +120,12 @@ class EmergencyAgent(SETTAgent):
 if __name__ == "__main__":
 
     print("══════════════════════════════════════════════════════")
-    print("  SETT Executor — Actions as Data")
+    print("  SETT Executor: Actions as Data")
     print("══════════════════════════════════════════════════════")
 
-    # ── Scenario 1: normal notification — approved, handler runs ────────────
+    # ── Scenario 1: normal notification: approved, handler runs ────────────
 
-    print("\n[SCENARIO 1] Routine SMS reminder — expected: sent")
+    print("\n[SCENARIO 1] Routine SMS reminder: expected: sent")
 
     executor = SETTExecutor()
     executor.register_handler("send_sms", real_sms_client)
@@ -143,9 +143,9 @@ if __name__ == "__main__":
     )
     print(f"  ✓ Handler executed, result: {result}")
 
-    # ── Scenario 2: emergency dispatch — approved, handler runs ─────────────
+    # ── Scenario 2: emergency dispatch: approved, handler runs ─────────────
 
-    print("\n[SCENARIO 2] Emergency dispatch requested — expected: dispatched")
+    print("\n[SCENARIO 2] Emergency dispatch requested: expected: dispatched")
 
     result = orchestrator.process(
         input_data={"location": "Av. Corrientes 1234", "instability": 0.6},
@@ -156,9 +156,9 @@ if __name__ == "__main__":
 
     # ── Scenario 3: blocked BEFORE the handler ever runs ────────────────────
     # A strict ruleset + crisis state pushes the score past reject_threshold.
-    # real_sms_client() is NEVER called — no SMS is actually sent.
+    # real_sms_client() is NEVER called: no SMS is actually sent.
 
-    print("\n[SCENARIO 3] SMS attempted during crisis, strict ruleset — expected: BLOCKED")
+    print("\n[SCENARIO 3] SMS attempted during crisis, strict ruleset: expected: BLOCKED")
 
     strict_ruleset = EthicalRuleset(name="strict", reject_threshold=3.0, warn_threshold=1.5)
     strict_executor = SETTExecutor()
@@ -176,12 +176,12 @@ if __name__ == "__main__":
         )
         print("  Handler ran (unexpected)")
     except SETTEthicalFilterRejectedError as e:
-        print(f"  ✗ BLOCKED before the handler ran — no SMS was sent.")
+        print(f"  ✗ BLOCKED before the handler ran: no SMS was sent.")
         print(f"    Reason: {str(e)[:120]}...")
 
-    # ── Scenario 4: no handler registered — fails closed, not open ──────────
+    # ── Scenario 4: no handler registered: fails closed, not open ──────────
 
-    print("\n[SCENARIO 4] Action type with no registered handler — expected: SETTConfigurationError")
+    print("\n[SCENARIO 4] Action type with no registered handler: expected: SETTConfigurationError")
 
     bare_executor = SETTExecutor()  # no handlers registered at all
     bare_orchestrator = SETTOrchestrator(ethical_filter=EthicalFilter())
@@ -195,7 +195,7 @@ if __name__ == "__main__":
         )
         print("  Handler ran (unexpected)")
     except SETTConfigurationError as e:
-        print(f"  ✗ Failed closed — no handler means no side effect, not a silent no-op.")
+        print(f"  ✗ Failed closed: no handler means no side effect, not a silent no-op.")
         print(f"    Reason: {str(e)[:120]}...")
 
     # ── Executor audit log ───────────────────────────────────────────────────
@@ -211,5 +211,5 @@ if __name__ == "__main__":
     print("  NotificationAgent and EmergencyAgent never import an SMS or")
     print("  emergency-services SDK. The only code that can call")
     print("  real_sms_client() or real_emergency_services_client() is the")
-    print("  Executor — and only after the EthicalFilter approves it.")
+    print("  Executor: and only after the EthicalFilter approves it.")
     print(f"{'═' * 55}\n")

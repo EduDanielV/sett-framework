@@ -1,5 +1,5 @@
 """
-SETT Framework — Sentiment Base Adapter
+SETT Framework: Sentiment Base Adapter
 ==============================
 Abstract interface that all sentiment/emotional-tone adapters must
 implement.
@@ -11,7 +11,7 @@ never on a specific provider's NLU API.
 Directly motivated by sett/ethics_ruler/ethic_kernel/context_analyzer.py,
 whose ContextAnalyzer.analyze() has accepted an `emotional_state: str`
 parameter since v0.1.1 with the docstring "Detected emotional state
-(from Sentiment Analyzer)" — the slot existed before any adapter filled
+(from Sentiment Analyzer)": the slot existed before any adapter filled
 it. This module is that adapter, not new plumbing.
 """
 from __future__ import annotations
@@ -37,14 +37,14 @@ class SentimentResult:
     Deliberately a raw signal, not a decision: mapping this to a
     categorical emotional_state string (see
     ContextAnalyzer.EMOTIONAL_RISK_MODIFIERS: "calm", "anxious",
-    "distressed", etc.) is application logic, not the adapter's job —
+    "distressed", etc.) is application logic, not the adapter's job:
     same reasoning as TTSBase not playing audio and STTBase not owning
     a microphone loop. What counts as "distressed" for one application
     may not for another; the adapter only reports what it measured.
 
     sentence-level detail (`sentences`) exists specifically to let an
     application compare document-level score against per-sentence
-    scores — a contradiction between the two is one concrete, testable
+    scores: a contradiction between the two is one concrete, testable
     signal for sarcasm ("that's just great" scored positive at
     document level but negative at the one sentence carrying the
     literal complaint). Empty tuple by default: not every provider
@@ -58,7 +58,7 @@ class SentimentResult:
     """
     Overall emotional intensity, regardless of polarity. Unbounded
     (longer or more emotionally charged text produces a higher
-    magnitude) — 0.0 means emotionally neutral/flat text.
+    magnitude): 0.0 means emotionally neutral/flat text.
     """
 
     sentences: tuple[SentenceSentiment, ...] = field(default_factory=tuple)

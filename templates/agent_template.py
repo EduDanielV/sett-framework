@@ -6,7 +6,7 @@ Copy this file, rename it, and fill in the parts marked TODO.
 An agent:
 1. Registers once with the orchestrator: orchestrator.register_agent(MyAgent())
 2. Coordinates one or more experts (see expert_template.py)
-3. Closes process() in ONE of three ways — pick whichever fits your
+3. Closes process() in ONE of three ways: pick whichever fits your
    case, explained below at the point where it applies.
 
 You don't need to touch anything in the framework to add or remove an
@@ -34,7 +34,7 @@ class MyAgent(SETTAgent):
         super().__init__(name="MyAgent", domain="my_domain")
 
         # TODO: register each expert this agent coordinates here.
-        # You can have just one, or several — there's no fixed correct
+        # You can have just one, or several: there's no fixed correct
         # number, it depends on how many distinct tasks your domain
         # needs. See CONVENTIONS.md once it exists.
         # self.register_expert(MyExpert(name="my_expert"))
@@ -47,7 +47,7 @@ class MyAgent(SETTAgent):
 
         # ── Pick ONE of these three ways to close process() ───────────
         #
-        # (A) This agent only reports a state — it doesn't execute any
+        # (A) This agent only reports a state: it doesn't execute any
         #     real-world effect (doesn't send anything, doesn't call
         #     anyone). The most common case. The result passes through
         #     the EthicalFilter before being stored in universal memory.
@@ -63,13 +63,13 @@ class MyAgent(SETTAgent):
         #     this call.
         #
         # self.propose_action("my_action", action_context=input_data)
-        # (only reached here if it wasn't blocked — now execute the
+        # (only reached here if it wasn't blocked: now execute the
         #  real effect yourself)
         # return result
 
         # (C) This agent produces a real effect and you want the full
         #     structural guarantee: this agent NEVER touches the real
-        #     client (SMS, API, whatever it is) — it only describes
+        #     client (SMS, API, whatever it is): it only describes
         #     intent. Requires a SETTExecutor with a handler registered
         #     for "my_action" (see docs/api_reference.md → SETTExecutor).
         #

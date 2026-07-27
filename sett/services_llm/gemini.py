@@ -1,9 +1,9 @@
 """
-SETT Framework — Google Gemini Adapter
+SETT Framework: Google Gemini Adapter
 ==============================
 LLM adapter for Google's Gemini models.
 
-Implements the LLMBase interface — fully interchangeable with
+Implements the LLMBase interface: fully interchangeable with
 AnthropicAdapter or OpenAIAdapter.
 
 Requires: pip install sett-framework[gemini]
@@ -76,7 +76,7 @@ class GeminiAdapter(LLMBase):
         return self._model_name
 
     def complete(self, prompt: str, system: str = "", **kwargs: Any) -> str:
-        """One-shot completion — no conversation history."""
+        """One-shot completion: no conversation history."""
         try:
             full_prompt = f"{system}\n\n{prompt}".strip() if system else prompt
             config = self._genai.GenerationConfig(

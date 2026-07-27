@@ -1,5 +1,5 @@
 """
-SETT Framework — Exceptions
+SETT Framework: Exceptions
 ==============================
 All custom exceptions raised by the framework.
 When something goes wrong in SETT, the developer receives a specific,

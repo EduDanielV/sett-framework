@@ -1,12 +1,12 @@
 """
-SETT Framework — EthicalFilter
+SETT Framework: EthicalFilter
 ==============================
 The governance layer of SETT. Implements the full three-layer
 hybrid risk evaluation:
 
-  Layer 1 — Action harm score (HarmCategory weights)
-  Layer 2 — User state (RiskProfile three pillars)
-  Layer 3 — Environmental context (RiskLevel 0–5)
+  Layer 1: Action harm score (HarmCategory weights)
+  Layer 2: User state (RiskProfile three pillars)
+  Layer 3: Environmental context (RiskLevel 0–5)
 
 Every action and every UniversalMemory write passes through here.
 The filter always prioritizes human protection.
@@ -14,8 +14,11 @@ The filter always prioritizes human protection.
 from __future__ import annotations
 from enum import Enum
 from typing import Any, TYPE_CHECKING
+from copy import deepcopy
 from datetime import datetime, timezone
 import logging
+
+from sett.audit_ruler.chain import append_chained_entry, verify_chain
 
 from sett.ethics_ruler.ethic_kernel.rules import EthicalRuleset, default_ruleset
 from sett.ethics_ruler.ethic_kernel.context_analyzer import ContextAnalyzer, ContextAnalysis
@@ -59,7 +62,7 @@ class EthicalFilter:
         Register a domain-specific ContextAnalyzer for one action type.
 
         Real deployments often need more than keyword-based scoring for
-        a specific action — e.g. an economic analyzer for
+        a specific action: e.g. an economic analyzer for
         "confirm_purchase" that reads over_budget_amount, or a health
         analyzer for "emergency_call" that reads vitals directly. This
         lets you register exactly that, per action type, without
@@ -119,7 +122,7 @@ class EthicalFilter:
         Raises:
             SETTEthicalFilterRejectedError: If the action is blocked.
         """
-        # Full three-layer analysis — uses the analyzer registered for
+        # Full three-layer analysis: uses the analyzer registered for
         # this specific action_type if one exists, otherwise the
         # generic analyzer (same behavior as before register_analyzer
         # existed).
@@ -131,7 +134,7 @@ class EthicalFilter:
             environmental_context=environmental_context,
         )
 
-        # Effective thresholds — tightened by environmental context
+        # Effective thresholds: tightened by environmental context
         env_modifier = (
             environmental_context.filter_threshold_modifier
             if environmental_context else 0.0
@@ -139,10 +142,12 @@ class EthicalFilter:
         effective_reject = max(1.0, self._ruleset.reject_threshold - env_modifier)
         effective_warn   = max(0.5, self._ruleset.warn_threshold - env_modifier)
 
-        # Determine verdict
+        # Determine the base verdict from the proposed action's harm score.
+        # ``human_at_risk`` and situation urgency never inflate that score and
+        # never make a protective response harmful. A separate conservative
+        # rule below may promote an otherwise silent ALLOW to WARN when the
+        # action has no protective classification.
         score = analysis.risk_score
-        if analysis.human_at_risk:
-            score = max(score, effective_reject - 0.01)
 
         if score >= effective_reject:
             verdict = FilterVerdict.REJECT
@@ -151,16 +156,36 @@ class EthicalFilter:
         else:
             verdict = FilterVerdict.ALLOW
 
+        # A severe human situation must not disappear as a silent ALLOW when
+        # the selected analyzer has not classified the proposed action as
+        # protective.  This promotes only ALLOW -> WARN: it does not inflate
+        # the action harm score, downgrade a REJECT, or penalize an action that
+        # a domain analyzer has explicitly marked as protective.
+        decision_reason_codes: list[str] = []
+        if (
+            analysis.human_at_risk
+            and not analysis.safety_assessment.protective_action
+            and verdict is FilterVerdict.ALLOW
+        ):
+            verdict = FilterVerdict.WARN
+            decision_reason_codes.append(
+                "human_at_risk_without_protective_classification"
+            )
+
         # Log the decision
-        self._log(action, score, verdict, analysis,
-                  effective_reject, effective_warn, env_modifier)
+        self._log(
+            action, score, verdict, analysis,
+            effective_reject, effective_warn, env_modifier,
+            decision_reason_codes,
+        )
 
         # Act on verdict
         if verdict == FilterVerdict.WARN:
             logger.warning(
                 "[EthicalFilter] WARN | action='%s' score=%.2f "
-                "env_modifier=%.1f reason=%s",
-                action, score, env_modifier, analysis.reasoning,
+                "env_modifier=%.1f decision_reasons=%s reason=%s",
+                action, score, env_modifier, decision_reason_codes,
+                analysis.reasoning,
             )
 
         if verdict == FilterVerdict.REJECT:
@@ -191,24 +216,35 @@ class EthicalFilter:
         effective_reject: float,
         effective_warn: float,
         env_modifier: float,
+        decision_reason_codes: list[str],
     ) -> None:
-        self._audit_log.append({
+        safety = analysis.safety_assessment
+        append_chained_entry(self._audit_log, {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "action": action,
             "harm_score": round(score, 4),
             "verdict": verdict.value,
             "emotional_state": analysis.emotional_state,
             "human_at_risk": analysis.human_at_risk,
+            "situation_urgency": round(safety.situation_urgency, 4),
+            "action_harm_risk": round(safety.action_harm_risk, 4),
+            "omission_risk": round(safety.omission_risk, 4),
+            "protective_action": safety.protective_action,
             "env_risk_level": analysis.risk_level.value if analysis.risk_level else 0,
             "env_modifier": env_modifier,
             "effective_reject_threshold": effective_reject,
             "effective_warn_threshold": effective_warn,
+            "decision_reason_codes": list(decision_reason_codes),
             "reasoning": analysis.reasoning,
         })
 
     def get_audit_log(self) -> list[dict[str, Any]]:
-        """Full audit log of all ethical decisions."""
-        return list(self._audit_log)
+        """Defensive snapshot of all ethical decisions."""
+        return deepcopy(self._audit_log)
+
+    def verify_audit_log(self) -> bool:
+        """Verify sequence and hash links in the internal ethical log."""
+        return verify_chain(self._audit_log)
 
     def set_ruleset(self, ruleset: EthicalRuleset) -> None:
         self._ruleset = ruleset

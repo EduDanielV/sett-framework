@@ -99,7 +99,7 @@ Return all published environmental contexts, keyed by `location_id`.
 
 `get_ethical_audit_log()` → `list[dict]`
 
-Return the full audit log of every ethical decision made since this orchestrator was created. Each entry contains: `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `reasoning`.
+Return the full audit log of every ethical decision made since this orchestrator was created. Each entry contains: `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `situation_urgency`, `action_harm_risk`, `omission_risk`, `protective_action`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `decision_reason_codes`, and `reasoning`.
 
 ---
 
@@ -111,7 +111,7 @@ List of all registered agent domains.
 
 `run_pipeline(steps, input_data, emotional_state="unknown", location_id="global")` → `PipelineResult`
 
-Run an ordered sequence of stages, each handled by a different registered agent, with **explicit data flow** between stages. This is an additive capability: `process()` (route-to-one / broadcast-to-all) is unchanged. Each stage executes through the same path as routed processing — same propagation of `emotional_state` / `location_id`, same `EthicalFilter` evaluation on publish, same audit log entries.
+Run an ordered sequence of stages, each handled by a different registered agent, with **explicit data flow** between stages. This is an additive capability: `process()` (route-to-one / broadcast-to-all) is unchanged. Each stage executes through the same path as routed processing: same propagation of `emotional_state` / `location_id`, same `EthicalFilter` evaluation on publish, same audit log entries.
 
 `steps` is a list where each element is a `PipelineStep(domain, transform=None)` or a plain domain string (shorthand for a step without transform). By default the first stage receives `input_data` and every later stage receives the previous stage's output; a `transform(original_input, prev_output) -> dict` reshapes the stage's input when needed.
 
@@ -119,7 +119,7 @@ Three guarantees define the mechanism:
 
 1. **Memory isolation between stages.** Stage inputs are passed hand-to-hand, never read from universal memory. Each agent keeps its own `PrivateMemory`; no stage sees another stage's intermediate reasoning.
 2. **Fail-closed configuration.** All stage domains are validated *before* the first stage runs (`SETTAgentNotFoundError`), an empty pipeline raises `SETTConfigurationError`, and a transform returning a non-dict raises `SETTConfigurationError`. A misconfigured pipeline never produces partial side effects.
-3. **Rejection handling as part of the mechanism.** If the `EthicalFilter` rejects a stage: that agent publishes nothing, the remaining stages are marked `"skipped"`, and the rejection is returned **explicitly** in `PipelineResult.rejection` as a `RejectionOutcome` carrying the structured fields (`action`, `score`, `threshold`, `principle`, `reasoning`, `message`) taken directly from the exception's attributes. The rejection is never written to, nor meant to be read from, universal memory — the caller that synthesizes the final response receives it directly.
+3. **Rejection handling as part of the mechanism.** If the `EthicalFilter` rejects a stage: that agent publishes nothing, the remaining stages are marked `"skipped"`, and the rejection is returned **explicitly** in `PipelineResult.rejection` as a `RejectionOutcome` carrying the structured fields (`action`, `score`, `threshold`, `principle`, `reasoning`, `message`) taken directly from the exception's attributes. The rejection is never written to, nor meant to be read from, universal memory: the caller that synthesizes the final response receives it directly.
 
 Return types (all frozen dataclasses, importable from `sett`):
 
@@ -145,7 +145,7 @@ result = orchestrator.run_pipeline(
 if result.completed:
     final = result.output
 else:
-    r = result.rejection            # explicit hand-off — not in memory
+    r = result.rejection            # explicit hand-off: not in memory
     notify_user(r.principle, r.score)   # structured, no string parsing
 ```
 
@@ -180,7 +180,7 @@ Retrieve a registered expert by name. Raises `SETTExpertNotFoundError` if not fo
 
 ---
 
-`process(input_data)` → `dict` *(abstract — must be implemented)*
+`process(input_data)` → `dict` *(abstract: must be implemented)*
 
 Main processing method. Coordinate experts, use private memory for intermediate state, compose a final result, call `_publish_to_universal(result)`, and return the result.
 
@@ -192,7 +192,7 @@ Main processing method. Coordinate experts, use private memory for intermediate 
 
 `_publish_to_universal(result, risk_profile=None)` → `None`
 
-Publish the agent's final result to universal memory. This is the only way an agent communicates outward. The result passes through the EthicalFilter before being stored — `emotional_state` and the `EnvironmentalContext` for the agent's current location are forwarded automatically. Call this at the end of `process()`.
+Publish the agent's final result to universal memory. This is the only way an agent communicates outward. The result passes through the EthicalFilter before being stored: `emotional_state` and the `EnvironmentalContext` for the agent's current location are forwarded automatically. Call this at the end of `process()`.
 
 Note: this only evaluates a result AFTER it exists. It does not gate real-world side effects (sending a message, calling an API) that may have already happened inside `resolve()`/`process()`. For that, use `propose_action()` or `submit_action()` below.
 
@@ -200,13 +200,13 @@ Note: this only evaluates a result AFTER it exists. It does not gate real-world 
 
 `propose_action(action, action_context=None, risk_profile=None)` → `None`
 
-Gate a real-world side effect through the `EthicalFilter` **before** it is executed — call this from inside `resolve()`/`process()`, before performing the effect yourself. Lightweight and opt-in: the developer must remember to call it. Raises `SETTEthicalFilterRejectedError` if blocked; the side effect must not be performed in that case.
+Gate a real-world side effect through the `EthicalFilter` **before** it is executed: call this from inside `resolve()`/`process()`, before performing the effect yourself. Lightweight and opt-in: the developer must remember to call it. Raises `SETTEthicalFilterRejectedError` if blocked; the side effect must not be performed in that case.
 
 ---
 
 `submit_action(action_type, payload=None, risk_profile=None)` → `Any`
 
-Structural alternative to `propose_action()`: describes the effect as an `Action` and submits it to the `SETTExecutor` registered with this orchestrator (see the `Action` / `SETTExecutor` section below). The agent never holds a reference to the real client — only the Executor's registered handler does, and only if the `EthicalFilter` approves. Raises `SETTConfigurationError` if no `Executor` (or no handler for this `action_type`) is registered.
+Structural alternative to `propose_action()`: describes the effect as an `Action` and submits it to the `SETTExecutor` registered with this orchestrator (see the `Action` / `SETTExecutor` section below). The agent never holds a reference to the real client: only the Executor's registered handler does, and only if the `EthicalFilter` approves. Raises `SETTConfigurationError` if no `Executor` (or no handler for this `action_type`) is registered.
 
 ---
 
@@ -246,7 +246,7 @@ SETTExpert(name)
 
 ---
 
-`resolve(context)` → `dict` *(abstract — must be implemented)*
+`resolve(context)` → `dict` *(abstract: must be implemented)*
 
 Main method of the expert. Process the context, write relevant state to private memory via `self._private_memory`, and return a result dict.
 
@@ -289,11 +289,11 @@ from sett import PhrasingExpert
 PhrasingExpert(name, llm=None)
 ```
 
-Subclasses implement three methods instead of `resolve()` directly — `resolve()` is a template method you should not override:
+Subclasses implement three methods instead of `resolve()` directly: `resolve()` is a template method you should not override:
 
 | Method | Description |
 |---|---|
-| `determine_facts(context)` → `dict` | Pure deterministic logic — no LLM involved. Returns what's true regardless of how it ends up phrased. |
+| `determine_facts(context)` → `dict` | Pure deterministic logic: no LLM involved. Returns what's true regardless of how it ends up phrased. |
 | `build_prompt(facts, context)` → `str` | Describes, in natural language, what the LLM should say based on the facts already computed. Never pass raw, unprocessed context the LLM could misread as license to invent additional facts. |
 | `fallback_text(facts, context)` → `str` | The deterministic text used when there's no LLM configured, or when the call fails for any reason. Must always produce a valid result on its own. |
 
@@ -302,7 +302,7 @@ Subclasses implement three methods instead of `resolve()` directly — `resolve(
 | `OUTPUT_KEY` | The key the phrased text is merged under in the result dict. Override per subclass (e.g. `"greeting"`, `"summary"`). Defaults to `"text"`. |
 | `SYSTEM_PROMPT` | The system prompt sent to the LLM. Override per subclass/persona. |
 
-**Contract:** the LLM only *phrases* facts your deterministic logic already produced — it never invents or alters them. If no `llm` is given, or the adapter raises `SETTLLMAdapterError`, `PhrasingExpert` falls back to `fallback_text()` automatically; a broken or absent LLM never prevents an agent from responding.
+**Contract:** the LLM only *phrases* facts your deterministic logic already produced: it never invents or alters them. If no `llm` is given, or the adapter raises `SETTLLMAdapterError`, `PhrasingExpert` falls back to `fallback_text()` automatically; a broken or absent LLM never prevents an agent from responding.
 
 **Minimal implementation**
 
@@ -329,7 +329,7 @@ result = expert.resolve({"hour": 8})
 
 ### StubDomainAgent
 
-A generic, ready-to-use placeholder agent for a domain that isn't built yet. Unlike `agent_template.py`/`expert_template.py` in `templates/`, this needs no subclassing or customization — import it and use it directly.
+A generic, ready-to-use placeholder agent for a domain that isn't built yet. Unlike `agent_template.py`/`expert_template.py` in `templates/`, this needs no subclassing or customization: import it and use it directly.
 
 ```python
 from sett import StubDomainAgent
@@ -337,9 +337,9 @@ from sett import StubDomainAgent
 StubDomainAgent(domain, name=None)
 ```
 
-Useful when assembling a multi-agent system incrementally: register a `StubDomainAgent` for every domain your router or synthesizer needs to be able to call, so the full flow (dispatch → collect → synthesize) is testable end to end before any of the real agents exist. Swap in the real agent later by registering it under the same domain — since `SETTOrchestrator.register_agent()` keys agents by domain, the new registration replaces the stub with no other change required anywhere else in the system.
+Useful when assembling a multi-agent system incrementally: register a `StubDomainAgent` for every domain your router or synthesizer needs to be able to call, so the full flow (dispatch → collect → synthesize) is testable end to end before any of the real agents exist. Swap in the real agent later by registering it under the same domain: since `SETTOrchestrator.register_agent()` keys agents by domain, the new registration replaces the stub with no other change required anywhere else in the system.
 
-`process()` returns `{"status": "stub", "domain": ..., "received": <input_data>}` — an honest, structured result a downstream synthesizer can narrate as "not built yet" instead of crashing or fabricating an answer.
+`process()` returns `{"status": "stub", "domain": ..., "received": <input_data>}`: an honest, structured result a downstream synthesizer can narrate as "not built yet" instead of crashing or fabricating an answer.
 
 ```python
 orchestrator.register_agent(StubDomainAgent("health"))
@@ -400,16 +400,16 @@ Instantiated automatically by `SETTOrchestrator`. You do not normally need to cr
 
 ### RiskLevel
 
-Six-level environmental risk scale. Describes the state of the environment a user is in — not the user themselves.
+Six-level environmental risk scale. Describes the state of the environment a user is in: not the user themselves.
 
 ```python
 class RiskLevel(IntEnum):
-    LEVEL_0 = 0   # Normal — baseline operation
-    LEVEL_1 = 1   # Attention — anomaly detected
-    LEVEL_2 = 2   # Warning — controlled threat
-    LEVEL_3 = 3   # Danger — active threat, prepare for response
-    LEVEL_4 = 4   # Critical — immediate action required
-    LEVEL_5 = 5   # Emergency — maximum protocol
+    LEVEL_0 = 0   # Normal: baseline operation
+    LEVEL_1 = 1   # Attention: anomaly detected
+    LEVEL_2 = 2   # Warning: controlled threat
+    LEVEL_3 = 3   # Danger: active threat, prepare for response
+    LEVEL_4 = 4   # Critical: immediate action required
+    LEVEL_5 = 5   # Emergency: maximum protocol
 ```
 
 **Properties**
@@ -507,7 +507,7 @@ EnvironmentalContext(
 | `EnvironmentalContext.normal(location_id)` | Returns a baseline level-0 context for a location. |
 | `EnvironmentalContext.from_dict(data)` | Reconstruct from `UniversalMemory` storage. |
 
-**Privacy contract:** `EnvironmentalContext` never contains personal identifiers, biometric values, or `RiskProfile` data. It communicates "the environment has this level" — never "this person has this profile".
+**Privacy contract:** `EnvironmentalContext` never contains personal identifiers, biometric values, or `RiskProfile` data. It communicates "the environment has this level": never "this person has this profile".
 
 ---
 
@@ -515,7 +515,7 @@ EnvironmentalContext(
 
 ### BiometricReading
 
-Structural data model for physical vital-sign readings — same role for biometrics that `RiskProfile`/`EnvironmentalContext` play in `risk_ruler`: a typed value object `ethics_ruler` consumes, not a decision-maker itself. Extracted from `ContextAnalyzer._detect_human_at_risk`, which read `context["health"]`/`context["heart_rate_bpm"]` directly before this pillar existed.
+Structural data model for physical vital-sign readings: same role for biometrics that `RiskProfile`/`EnvironmentalContext` play in `risk_ruler`: a typed value object `ethics_ruler` consumes, not a decision-maker itself. Extracted from `ContextAnalyzer._detect_human_at_risk`, which read `context["health"]`/`context["heart_rate_bpm"]` directly before this pillar existed.
 
 ```python
 BiometricReading(
@@ -544,7 +544,7 @@ All fields optional and immutable (`frozen=True`). A reading with no data presen
 |---|---|
 | `to_dict()` | Serialize for logging/storage. |
 
-**Privacy note:** `ContextAnalyzer` only ever reads `is_critical` (a bool) from this class — never the raw vital-sign values — so raw biometric data cannot leak into the audit log or `UniversalMemory` through this path, the same structural guarantee `RiskProfile` has for its own pillars.
+**Privacy note:** `ContextAnalyzer` only ever reads `is_critical` (a bool) from this class, never the raw vital-sign values, so raw biometric data cannot leak into the audit log or `UniversalMemory` through this path, the same structural guarantee `RiskProfile` has for its own pillars.
 
 ---
 
@@ -582,11 +582,17 @@ Evaluate an action through the three-layer system.
 Returns `FilterVerdict.ALLOW` or `FilterVerdict.WARN`.
 Raises `SETTEthicalFilterRejectedError` if the action is blocked.
 
+The base verdict is derived from action harm score. If `human_at_risk=True`,
+`protective_action=False`, and the base verdict would be `ALLOW`, the filter
+promotes it to `WARN` without changing the score. The audit entry records
+`human_at_risk_without_protective_classification` in
+`decision_reason_codes`. Explicitly protective actions are not promoted.
+
 ---
 
 `register_analyzer(action_type, analyzer)` → `None`
 
-Registers a domain-specific `ContextAnalyzer` for one exact action type. Real deployments often need more than keyword-based scoring for a specific action — e.g. an economic analyzer for `"confirm_purchase"` that reads `over_budget_amount`, or a health analyzer for `"emergency_call"` that reads vitals directly. Any `action_type` without a registered analyzer keeps using the generic one passed to `__init__` (or the default `ContextAnalyzer`) — additive and safe, existing code that never calls this keeps working exactly as before.
+Registers a domain-specific `ContextAnalyzer` for one exact action type. Real deployments often need more than keyword-based scoring for a specific action, e.g. an economic analyzer for `"confirm_purchase"` that reads `over_budget_amount`, or a health analyzer for `"emergency_call"` that reads vitals directly. Any `action_type` without a registered analyzer keeps using the generic one passed to `__init__` (or the default `ContextAnalyzer`), additive and safe, existing code that never calls this keeps working exactly as before.
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -602,13 +608,13 @@ filt.register_analyzer("confirm_purchase", EconomicContextAnalyzer())
 
 `unregister_analyzer(action_type)` → `None`
 
-Removes a previously registered analyzer for an action type — it falls back to the generic analyzer again. Safe to call even if nothing was registered for it.
+Removes a previously registered analyzer for an action type: it falls back to the generic analyzer again. Safe to call even if nothing was registered for it.
 
 ---
 
 `get_audit_log()` → `list[dict]`
 
-Full audit log of every decision. Each entry includes: `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `reasoning`.
+Full audit log of every decision. Each entry includes: `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `situation_urgency`, `action_harm_risk`, `omission_risk`, `protective_action`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `decision_reason_codes`, and `reasoning`.
 
 ---
 
@@ -705,7 +711,7 @@ Performs the full three-layer analysis and returns a `ContextAnalysis` with `ris
 
 ---
 
-## core_ruler — Action and SETTExecutor (v0.2.0)
+## core_ruler: Action and SETTExecutor (v0.2.0)
 
 ### Action
 
@@ -748,7 +754,7 @@ registered for that `action_type` (fails closed, not open).
 
 ---
 
-### SETTAgent.submit_action() — using the Executor from an agent
+### SETTAgent.submit_action(): using the Executor from an agent
 
 ```python
 agent.submit_action(action_type, payload=None, risk_profile=None)
@@ -757,7 +763,7 @@ agent.submit_action(action_type, payload=None, risk_profile=None)
 Describes an `Action` and submits it to the `SETTExecutor` registered with
 this agent's orchestrator (via `orchestrator.register_executor(executor)`).
 Requires both an `Executor` and a handler for that `action_type` to be
-registered — otherwise raises `SETTConfigurationError`.
+registered: otherwise raises `SETTConfigurationError`.
 
 This is the structural alternative to `propose_action()`: the agent never
 holds a reference to the real client (SMS provider, payment API, etc.),
@@ -841,7 +847,7 @@ API key is read from the `GOOGLE_API_KEY` environment variable if `api_key` is n
 
 ### OllamaAdapter
 
-LLM adapter for locally-running models via [Ollama](https://ollama.com). No API key, no cloud, no cost — inference happens entirely on your own machine.
+LLM adapter for locally-running models via [Ollama](https://ollama.com). No API key, no cloud, no cost: inference happens entirely on your own machine.
 
 ```python
 from sett.services_llm.ollama import OllamaAdapter
@@ -849,7 +855,7 @@ from sett.services_llm.ollama import OllamaAdapter
 OllamaAdapter(model="qwen3:1.7b", base_url="http://localhost:11434", temperature=0.75, timeout_seconds=30)
 ```
 
-Unlike the other three adapters, `OllamaAdapter` requires **no extra pip install** — it talks to Ollama's local REST API using only the Python standard library. You only need Ollama itself installed and running, with the target model already pulled (`ollama pull qwen3:1.7b`).
+Unlike the other three adapters, `OllamaAdapter` requires **no extra pip install**: it talks to Ollama's local REST API using only the Python standard library. You only need Ollama itself installed and running, with the target model already pulled (`ollama pull qwen3:1.7b`).
 
 Recommended low-resource models: `qwen3:1.7b` (lightest, ~4GB RAM) or `phi4-mini` (3.8B, MIT license, built for CPU-only machines).
 
@@ -885,7 +891,7 @@ except SETTEthicalFilterRejectedError as e:
 ### Structured attributes on `SETTEthicalFilterRejectedError`
 
 `str(e)` returns the same human-readable message as always. In addition,
-the data behind that message is available as real attributes — downstream
+the data behind that message is available as real attributes: downstream
 code should read these instead of parsing the message string:
 
 | Attribute | Type | Meaning |
@@ -905,7 +911,7 @@ try:
 except SETTEthicalFilterRejectedError as e:
     audit_ui.show(
         action=e.action,
-        score=e.score,          # a float — no string parsing
+        score=e.score,          # a float: no string parsing
         threshold=e.threshold,
         principle=e.principle,
     )

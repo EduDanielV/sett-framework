@@ -1,10 +1,10 @@
 """
-SETT Framework — Anthropic (Claude) Adapter
+SETT Framework: Anthropic (Claude) Adapter
 ==============================
 LLM adapter for Anthropic's Claude models.
 
 This is the recommended adapter for SETT-based systems.
-Implements the LLMBase interface — swap with any other adapter
+Implements the LLMBase interface: swap with any other adapter
 without changing the rest of the framework.
 
 Requires: pip install sett-framework[anthropic]
@@ -75,7 +75,7 @@ class AnthropicAdapter(LLMBase):
         return self._model
 
     def complete(self, prompt: str, system: str = "", **kwargs: Any) -> str:
-        """One-shot completion — no conversation history."""
+        """One-shot completion: no conversation history."""
         try:
             resp = self._client.messages.create(
                 model=self._model,

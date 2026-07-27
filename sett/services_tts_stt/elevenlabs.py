@@ -1,22 +1,22 @@
 """
-SETT Framework — ElevenLabs TTS Adapter
+SETT Framework: ElevenLabs TTS Adapter
 ==============================
 Text-to-speech adapter for ElevenLabs (https://elevenlabs.io).
 
-Implements TTSBase — fully interchangeable with GoogleTTSAdapter or
+Implements TTSBase: fully interchangeable with GoogleTTSAdapter or
 any other TTS provider. ElevenLabs has no STT product, so there is no
-ElevenLabsSTTAdapter and none is implied by this module — see
+ElevenLabsSTTAdapter and none is implied by this module: see
 services_tts_stt/base.py's docstring on why TTSBase/STTBase are
 separate interfaces.
 
-Talks to ElevenLabs' REST API directly via `requests` — no ElevenLabs
+Talks to ElevenLabs' REST API directly via `requests`: no ElevenLabs
 SDK dependency, same reasoning as OllamaAdapter using only stdlib for
 Ollama's local API (services_llm/ollama.py).
 
 Ported from an ElevenLabs patch archived alongside a downstream
 consumer application's legacy prototypes (originally one engine among
 several in a multi-engine tts.py dispatcher). Only the ElevenLabs HTTP
-call is carried over — engine selection, local playback, and
+call is carried over: engine selection, local playback, and
 output-file pruning were application-layer concerns in that script and
 do not belong in a stateless adapter.
 
