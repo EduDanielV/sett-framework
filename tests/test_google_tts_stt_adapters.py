@@ -6,7 +6,7 @@ dependencies (pip install sett-framework[google-tts-stt]): this test
 environment does not have them installed, matching how
 AnthropicAdapter/OpenAIAdapter/GeminiAdapter have no dedicated test
 file today (they need their real SDK to test meaningfully and this
-project does not pretend otherwise, see SETT_Convenciones_v2.md #16).
+project does not pretend otherwise, see SETT_Conventions_v2.md #16).
 
 What IS tested here without the real SDK:
   - the "package not installed" path (real behavior in this
@@ -115,7 +115,7 @@ class TestGoogleTTSAdapterSynthesize:
         with patch.dict(sys.modules, _fake_google_cloud_sys_modules("texttospeech", fake_module)):
             from sett.services_tts_stt.google import GoogleTTSAdapter
             adapter = GoogleTTSAdapter(language_code="es-AR")
-            result = adapter.synthesize("Hola, ¿en qué puedo ayudarte?")
+            result = adapter.synthesize("Hi, how can I help you?")
             assert result == b"fake-google-mp3-bytes"
 
     def test_synthesize_uses_configured_language_code(self, fake_google_credentials):

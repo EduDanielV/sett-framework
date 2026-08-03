@@ -23,7 +23,7 @@ carried over:
     text generation, not sentiment analysis: it belongs to an LLM
     adapter/PhrasingExpert, not here. Mixing it into this class was
     exactly the kind of two-responsibilities-in-one-expert pattern
-    Convención #1's corollary already documents splitting.
+    Convention #1's corollary already documents splitting.
 
 Requires: pip install sett-framework[google-sentiment]
 """
@@ -43,7 +43,7 @@ class GoogleSentimentAdapter(SentimentBase):
         from sett.services_sentiment.google import GoogleSentimentAdapter
 
         sentiment = GoogleSentimentAdapter()
-        result = sentiment.analyze("Estoy bastante frustrado con esto.")
+        result = sentiment.analyze("I'm quite frustrated with this.")
         print(result.score, result.magnitude)
     """
 

@@ -2,7 +2,7 @@ r"""
 Guard test: no internal codename of a consumer application built on
 SETT should ever appear in the public sett-framework tree.
 
-Convención #20 ("Nomenclatura pública"): SETT is published generically.
+Convention #20 ("Public naming"): SETT is published generically.
 Consumer applications are described as "two independent projects built
 on SETT", "an early prototype application", "a companion-assistant
 application", never by their real internal name. A `grep` sweep is
@@ -137,7 +137,7 @@ def test_no_internal_project_name_leaks_into_public_tree(forbidden_hash: str) ->
     assert not offenders, (
         f"Found {len(offenders)} mention(s) of a forbidden internal "
         f"project name (hash {forbidden_hash[:12]}...) in the public "
-        f"sett-framework tree (Convención #20: describe consumer "
+        f"sett-framework tree (Convention #20: describe consumer "
         f"applications generically, never by their real name):\n"
         + "\n".join(offenders)
     )

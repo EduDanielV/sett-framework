@@ -33,7 +33,7 @@ class GoogleTTSAdapter(TTSBase):
         from sett.services_tts_stt.google import GoogleTTSAdapter
 
         tts = GoogleTTSAdapter(language_code="es-AR")
-        audio_bytes = tts.synthesize("Hola, ¿en qué puedo ayudarte?")
+        audio_bytes = tts.synthesize("Hi, how can I help you?")
     """
 
     DEFAULT_LANGUAGE_CODE = "en-US"

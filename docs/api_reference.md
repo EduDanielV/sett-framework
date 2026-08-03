@@ -375,8 +375,8 @@ PrivateMemory(owner)
 | Method | Returns | Description |
 |---|---|---|
 | `write(key, value)` | `None` | Store any Python value under `key`. |
-| `read(key, default=None)` | `Any` | Read a value by key. Returns `default` if not found. |
-| `get_all()` | `dict` | Copy of all stored values. |
+| `read(key, default=None)` | `Any` | Read a value by key. Returns `default` if not found. Returns a **deep copy** (since v0.9.0) - mutating the returned value never affects stored state. |
+| `get_all()` | `dict` | **Deep copy** of all stored values (since v0.9.0). |
 | `clear()` | `None` | Remove all values. |
 | `get_history()` | `list[dict]` | Full write history for auditing. |
 | `owner` *(property)* | `str` | The name of the owning agent. |

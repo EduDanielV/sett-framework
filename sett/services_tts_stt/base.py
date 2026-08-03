@@ -14,12 +14,7 @@ TTSBase and STTBase are deliberately two separate interfaces, not one
 merged "voice" interface: a provider is free to implement only one of
 them (ElevenLabs, historically TTS-only, implements TTSBase and has no
 STTBase adapter; nothing about the interface forces it to pretend
-otherwise). See SETT_Convenciones_v2.md, entrada sobre nomenclatura de
-servicios: los adapters de un mismo proveedor se agrupan por archivo
-(sett/services_tts_stt/google.py trae GoogleTTSAdapter Y
-GoogleSTTAdapter, comparten credenciales), no por clase: cada clase
-implementa una sola interfaz, para que el aislamiento de tests y la
-intercambiabilidad no se pierdan.
+otherwise).
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod

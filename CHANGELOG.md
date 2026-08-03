@@ -2,6 +2,98 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.10.1] - 2026-07-28
+
+Four rounds of documentation/consistency fixes, all found and fixed the
+same day, before any of them were published - squashed into this single
+release rather than four separate ones (same reasoning as v0.7.0's own
+three-pieces-in-one-release precedent: nothing here was ever shipped
+individually, so there is no history to preserve by keeping them apart).
+
+### Fixed
+- `tests/test_elevenlabs_adapter.py` now guards with
+  `pytest.importorskip("requests")`. Previously, a bare install (`pip
+  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
+  FAIL instead of skip, contradicting the project's own documented
+  install instructions. Retroactive fix, applied 2026-07-29 - this
+  version was never published, so it is patched in place rather than
+  superseded by a new release.
+
+### Docs
+- `docs/security_model.md` claimed `PrivateMemory` "intentionally retains
+  normal Python object identity" - true before v0.9.0, false since: that
+  release changed `read()`/`get_all()` to return `deepcopy()`s (same
+  hardening already applied to `UniversalMemory` in v0.8.0), but this
+  paragraph was never updated to match. Found by an independent
+  installation/upgrade validation exercise (not the usual API audit),
+  cross-checking docs against actual behavior rather than symbol
+  inventory. Corrected, with the "why" (what broke before the fix, same
+  failure mode `UniversalMemory` already closed) spelled out instead of
+  just flipping the claim.
+- `docs/api_reference.md`: the `PrivateMemory` method table only said
+  `get_all()` returns a "Copy" (ambiguous - shallow or deep?) and said
+  nothing about `read()`. Both rows now say explicitly "deep copy (since
+  v0.9.0)".
+- `sett/services_tts_stt/base.py`'s module docstring had a paragraph in
+  Spanish (citing a nonexistent "SETT_Convenciones_v2.md" naming entry)
+  that does not exist in the actual published v0.7.0 source - a local
+  corruption introduced at some point after that release, unrelated to
+  any real decision. Confirmed against the real published file and
+  removed; the docstring now ends where it originally did.
+- Translated five Spanish example strings used as demo/test payloads
+  for the sentiment and TTS/STT adapters (`sett/services_sentiment/google.py`,
+  `sett/services_tts_stt/{google,elevenlabs}.py`,
+  `tests/test_google_sentiment_adapter.py`,
+  `tests/test_elevenlabs_adapter.py`, `tests/test_google_tts_stt_adapters.py`)
+  to English, for consistency: SETT is a general-purpose framework and its
+  own source should read in English throughout, regardless of the fact
+  that these particular adapters are language-agnostic and would work
+  identically with text in any language. No behavior change - these were
+  arbitrary example values (several going through fully mocked adapters).
+
+### Added
+- `docs/SETT_Conventions_v2.md`: the framework's own conventions/invariants
+  document, published for the first time. Every source citation of
+  "Convención #N" / `SETT_Convenciones_v2.md` across this codebase
+  (`CHANGELOG.md`'s v0.7.0 section, `sett/biometric_ruler/__init__.py`,
+  `sett/ethics_ruler/ethic_kernel/context_analyzer.py`,
+  `sett/services_sentiment/google.py`,
+  `tests/test_google_tts_stt_adapters.py`) had pointed at this file since
+  v0.7.0, but it only ever existed as a private, Spanish-language working
+  note used to draft the arXiv paper - never shipped, so every one of
+  those citations was pointing at nothing for anyone outside this
+  project. Translated in full and published as `SETT_Conventions_v2.md`;
+  every citing site updated from "Convención #N" to "Convention #N" and
+  from the old filename to the new one. Two internal-project-name
+  mentions found while translating (referring to the companion-assistant
+  application by name) were genericized before publishing, consistent
+  with Convention #20 - the guard test below caught both on the first
+  run.
+- `tests/test_no_spanish_in_public_tree.py`: a new guard test, same
+  spirit and structure as `test_no_internal_project_names.py`. Scans the
+  public tree for text that looks like Spanish (accented vowels, the
+  letter n-with-tilde, and inverted question/exclamation marks -
+  characters Spanish uses constantly and English never uses natively)
+  and fails if it finds any that isn't on an explicit, documented
+  allowlist (the framework author's real name, the project's own
+  "English, Español, 日本語" paper-language list, a couple of necessary
+  illustrative example words/names, and one historical CHANGELOG entry
+  quoting an already-fixed past mistake for the record). Motivated
+  directly by the two Spanish-leak incidents above, both only caught by
+  manual review this time; this test would have caught the first one
+  automatically the moment the suite ran. Deliberately not a
+  grammar-aware classifier: a careless Spanish phrase with zero accented
+  characters is rare but theoretically possible and would not be
+  caught - manual review before a release remains the backstop for that
+  specific gap. Verified against a real regression: temporarily
+  reintroducing the original Spanish-docstring mistake makes this test
+  fail with the exact offending line reported.
+
+### Compatibility
+- Documentation and test-suite only. No code logic changed, no public
+  API changed. 290 tests (up from 280 - 10 new, all in
+  `test_no_spanish_in_public_tree.py`).
+
 ## [0.10.0] - 2026-07-28
 
 ### Added
@@ -28,15 +120,6 @@ All notable changes to the SETT framework are documented here.
   added the missing type hint on `executor` (residual item from the
   v0.8.0 audit, never part of the 8 accepted fixes). Zero behavior
   change.
-
-### Fixed
-- `tests/test_elevenlabs_adapter.py` now guards with
-  `pytest.importorskip("requests")`. Previously, a bare install (`pip
-  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
-  FAIL instead of skip, contradicting the project's own documented
-  install instructions. Retroactive fix, applied 2026-07-29 - this
-  version was never published, so it is patched in place rather than
-  superseded by a new release.
 
 ### Compatibility
 - Fully backward compatible: `verify_facts()` is optional with a

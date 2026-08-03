@@ -253,7 +253,7 @@ class ContextAnalyzer:
         context["health"]/context["heart_rate_bpm"] itself. Behavior is
         unchanged (same thresholds, same nested/flat fallback introduced
         in v0.1.1); only the parsing moved to a typed data model instead
-        of living inline as dict access here. See Convención #23.
+        of living inline as dict access here. See Convention #23.
         """
         from sett.biometric_ruler.biometric_reading import BiometricReading
 

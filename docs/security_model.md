@@ -40,9 +40,16 @@ harmful” and not necessarily “no domain analyzer exists”.
 
 Universal-memory reads, history, ethical audit entries, and Executor logs return
 deep copies. Mutating a returned object cannot rewrite internal state.
-`PrivateMemory` intentionally retains normal Python object identity because it
-is an agent-local workspace; applications should store immutable values there
-when stronger guarantees are required.
+`PrivateMemory.read()` and `PrivateMemory.get_all()` return deep copies as well,
+since v0.9.0 (a downstream integrator mutating a nested value read from an
+agent's own workspace could otherwise corrupt stored data without ever calling
+`write()`, with no trace in `get_history()` - the same failure mode the
+Universal Memory guarantee above already closed). This paragraph previously
+claimed `PrivateMemory` "intentionally retains normal Python object identity" -
+that was accurate before v0.9.0, but the hardening pass changed it; the text
+was never updated to match. Applications should still prefer storing immutable
+values where practical, but should not rely on mutating a value read from
+`PrivateMemory` to have any effect on stored state.
 
 ## Tamper-evident logs
 

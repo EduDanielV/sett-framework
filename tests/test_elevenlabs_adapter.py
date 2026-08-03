@@ -67,7 +67,7 @@ class TestElevenLabsTTSAdapterSynthesize:
     def test_synthesize_returns_audio_bytes(self, mock_post):
         mock_post.return_value = _fake_response(content=b"real-audio-bytes")
         adapter = ElevenLabsTTSAdapter(api_key="k")
-        result = adapter.synthesize("Hola, ¿en qué puedo ayudarte?")
+        result = adapter.synthesize("Hi, how can I help you?")
         assert result == b"real-audio-bytes"
 
     @patch("sett.services_tts_stt.elevenlabs.requests.post")

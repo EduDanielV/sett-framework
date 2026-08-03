@@ -81,7 +81,7 @@ class TestGoogleSentimentAdapterAnalyze:
         with patch.dict(sys.modules, _fake_google_cloud_sys_modules("language_v1", fake_module)):
             from sett.services_sentiment.google import GoogleSentimentAdapter
             adapter = GoogleSentimentAdapter()
-            result = adapter.analyze("Estoy bastante frustrado con esto.")
+            result = adapter.analyze("I'm quite frustrated with this.")
 
             assert isinstance(result, SentimentResult)
             assert result.score == -0.6
@@ -93,21 +93,21 @@ class TestGoogleSentimentAdapterAnalyze:
             score=0.1,
             magnitude=0.9,
             sentences=[
-                ("Que buena tu ayuda.", -0.5),
-                ("Como siempre.", -0.4),
+                ("Great help you gave.", -0.5),
+                ("As always.", -0.4),
             ],
         )
         with patch.dict(sys.modules, _fake_google_cloud_sys_modules("language_v1", fake_module)):
             from sett.services_sentiment.google import GoogleSentimentAdapter
             adapter = GoogleSentimentAdapter()
-            result = adapter.analyze("Que buena tu ayuda. Como siempre.")
+            result = adapter.analyze("Great help you gave. As always.")
 
             assert len(result.sentences) == 2
             assert result.sentences[0] == SentenceSentiment(
-                text="Que buena tu ayuda.", score=-0.5
+                text="Great help you gave.", score=-0.5
             )
             assert result.sentences[1] == SentenceSentiment(
-                text="Como siempre.", score=-0.4
+                text="As always.", score=-0.4
             )
 
     def test_analyze_sends_text_as_plain_text_document(self, fake_google_credentials):

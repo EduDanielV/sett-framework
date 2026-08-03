@@ -216,15 +216,15 @@ class TestPhrasingExpertWithAgent:
 
 
 # ── verify_facts() (v0.10.0): the 4th, optional hook ─────────────────────
-# Motivado por dos subclases independientes en un proyecto downstream
-# que necesitaban exactamente esto y terminaban sobreescribiendo
-# resolve() entero para conseguirlo - ver docstring de la clase.
+# Motivated by two independent subclasses in a downstream project that
+# needed exactly this and ended up overriding resolve() wholesale to
+# get it - see the class docstring.
 
 class StrictGreetingExpert(PhrasingExpert):
-    """Igual a GreetingLikeExpert, pero rechaza cualquier frase que
-    contradiga el time_of_day real - la misma forma que necesitaron,
-    de manera independiente, las dos subclases que motivaron este
-    hook (ver docstring de la clase)."""
+    """Same as GreetingLikeExpert, but rejects any phrasing that
+    contradicts the real time_of_day - the same shape independently
+    needed by the two subclasses that motivated this hook (see the
+    class docstring)."""
 
     OUTPUT_KEY = "greeting"
 
@@ -247,7 +247,7 @@ class StrictGreetingExpert(PhrasingExpert):
 
 
 class ContradictingLLM(LLMBase):
-    """Redacta bien en la forma, pero contradice el hecho real a propósito."""
+    """Well-formed phrasing, but deliberately contradicts the real fact."""
     @property
     def model_name(self):
         return "contradicting"
@@ -261,27 +261,27 @@ class TestPhrasingExpertVerifyFacts:
 
     def test_override_can_discard_a_contradicting_llm_response(self):
         expert = StrictGreetingExpert(name="greeting", llm=ContradictingLLM())
-        result = expert.resolve({"hour": 8})   # morning real
-        assert result["greeting"] == "Good morning."   # fallback, no lo del LLM
+        result = expert.resolve({"hour": 8})   # real morning
+        assert result["greeting"] == "Good morning."   # fallback, not the LLM's
 
     def test_override_lets_a_correct_llm_response_through(self):
-        expert = StrictGreetingExpert(name="greeting", llm=FakeLLM())   # dice "morning"
-        result = expert.resolve({"hour": 8})   # morning real, coincide
+        expert = StrictGreetingExpert(name="greeting", llm=FakeLLM())   # says "morning"
+        result = expert.resolve({"hour": 8})   # real morning, matches
         assert result["greeting"] == "Hey there! Beautiful morning, isn't it?"
 
     def test_verify_facts_also_runs_on_fallback_text_not_only_llm_output(self):
-        """verify_facts() corre siempre después de _phrase(), sin LLM
-        configurado también - fallback_text() ya es correcto por
-        construcción acá, así que debe pasar sin cambios."""
-        expert = StrictGreetingExpert(name="greeting")   # sin LLM
+        """verify_facts() always runs after _phrase(), even with no LLM
+        configured - fallback_text() is already correct by construction
+        here, so it should pass through unchanged."""
+        expert = StrictGreetingExpert(name="greeting")   # no LLM
         result = expert.resolve({"hour": 8})
         assert result["greeting"] == "Good morning."
 
     def test_overriding_verify_facts_does_not_trigger_the_resolve_override_warning(self):
-        """El punto entero del hook: no hace falta tocar resolve() para
-        conseguir esto, así que el warning de "overrides resolve()" no
-        debería dispararse - a diferencia de un subclase vieja que sí
-        sobreescribe resolve() directamente."""
+        """The whole point of the hook: you don't need to touch resolve()
+        to get this, so the "overrides resolve()" warning should not
+        fire - unlike an older subclass that does override resolve()
+        directly."""
         import logging
 
         class NoisyRecorder(logging.Handler):

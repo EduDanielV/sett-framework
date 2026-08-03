@@ -43,7 +43,7 @@ class ElevenLabsTTSAdapter(TTSBase):
         from sett.services_tts_stt.elevenlabs import ElevenLabsTTSAdapter
 
         tts = ElevenLabsTTSAdapter(api_key="your-key")
-        audio_bytes = tts.synthesize("Hola, ¿en qué puedo ayudarte?")
+        audio_bytes = tts.synthesize("Hi, how can I help you?")
     """
 
     DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
