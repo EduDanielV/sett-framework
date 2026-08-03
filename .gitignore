@@ -16,7 +16,7 @@ build/
 *.egg-info/
 *.egg
 
-# Environment variables — NEVER commit API keys
+# Environment variables, NEVER commit API keys
 .env
 .env.*
 !.env.example
@@ -31,13 +31,6 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
-
-# Auditoría interna, nunca al repo público: este test contiene en su
-# propio código los nombres de proyecto que audita (Convención #20) —
-# publicarlo revelaría exactamente lo que está pensado para ocultar.
-# Se corre localmente antes de cada release/zip público, no viaja con
-# el repo. Ver su docstring para el detalle completo.
-tests/test_no_internal_project_names.py
 
 # OS
 .DS_Store
