@@ -6,11 +6,14 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21287133-blue)](https://doi.org/10.5281/zenodo.21287133)
 
-**Current source release: 0.8.0**: fail-closed wiring, defensive memory/audit
-snapshots, tamper-evident hash chains, and explicit separation between human
-situation urgency and proposed-action harm, including a conservative WARN for
-unclassified non-protective actions during human risk. See [`MIGRATION_v0.8.md`](MIGRATION_v0.8.md)
-and [`docs/security_model.md`](docs/security_model.md).
+**Current source release: 0.9.0**: closes the gaps found in a full public-API
+audit of 0.8.0. Defensive copies now match on both memory layers, audit log
+verification is reachable directly from the orchestrator, subclassing
+PhrasingExpert against its own contract now warns instead of failing
+silently, and every public symbol is documented, including a new explicit
+concurrency stance. See [`CHANGELOG.md`](CHANGELOG.md),
+[`MIGRATION_v0.8.md`](MIGRATION_v0.8.md), and
+[`docs/security_model.md`](docs/security_model.md).
 
 SETT is a modular multi-agent AI framework built around domain-specialized
 expert agents coordinated by a central orchestrator.

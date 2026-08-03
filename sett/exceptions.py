@@ -104,3 +104,18 @@ class SETTConfigurationError(SETTError):
     before the system starts running.
     """
     pass
+
+
+class SETTValidationError(SETTError, ValueError):
+    """
+    Raised when a data-carrying value fails its own validation (e.g. a
+    RiskProfile pillar outside its documented [0.0, 1.0] range).
+
+    Inherits from both SETTError and ValueError on purpose, the same
+    pattern the standard library's own json.JSONDecodeError uses for
+    ValueError. Code written against this framework's own convention
+    (`except SETTError`) and code written against the standard Python
+    idiom for constructor validation (`except ValueError`) both catch
+    the same exception: neither has to know about the other.
+    """
+    pass

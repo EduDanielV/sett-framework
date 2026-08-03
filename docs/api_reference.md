@@ -99,7 +99,13 @@ Return all published environmental contexts, keyed by `location_id`.
 
 `get_ethical_audit_log()` → `list[dict]`
 
-Return the full audit log of every ethical decision made since this orchestrator was created. Each entry contains: `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `situation_urgency`, `action_harm_risk`, `omission_risk`, `protective_action`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `decision_reason_codes`, and `reasoning`.
+Return the full audit log of every ethical decision made since this orchestrator was created. Each entry contains: `sequence`, `previous_hash`, `entry_hash`, `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `situation_urgency`, `action_harm_risk`, `omission_risk`, `protective_action`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `decision_reason_codes`, and `reasoning`. The first three fields are the SHA-256 hash chain added in v0.8.0 (see `verify_ethical_audit_log()` below).
+
+---
+
+`verify_ethical_audit_log()` → `bool`
+
+Verify the sequence and hash chain of the log returned by `get_ethical_audit_log()`. Delegates to the underlying `EthicalFilter.verify_audit_log()`, reachable here so tamper-evidence can be checked from the orchestrator itself: the entry point every example in this document already uses, without needing access to the filter directly. Returns `True` if the chain is intact, `False` if any entry was altered outside of `append_chained_entry()`. Tamper-evident within the running process only; this is not an external cryptographic signature.
 
 ---
 
@@ -614,7 +620,25 @@ Removes a previously registered analyzer for an action type: it falls back to th
 
 `get_audit_log()` → `list[dict]`
 
-Full audit log of every decision. Each entry includes: `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `situation_urgency`, `action_harm_risk`, `omission_risk`, `protective_action`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `decision_reason_codes`, and `reasoning`.
+Full audit log of every decision. Each entry includes: `sequence`, `previous_hash`, `entry_hash`, `timestamp`, `action`, `harm_score`, `verdict`, `emotional_state`, `human_at_risk`, `situation_urgency`, `action_harm_risk`, `omission_risk`, `protective_action`, `env_risk_level`, `env_modifier`, `effective_reject_threshold`, `effective_warn_threshold`, `decision_reason_codes`, and `reasoning`.
+
+---
+
+`verify_audit_log()` → `bool`
+
+Verify the sequence and hash chain of the audit log: `True` if every entry's `previous_hash` correctly links to the prior entry's `entry_hash` and no entry was altered outside of the internal `append_chained_entry()` call, `False` otherwise. Also reachable through `SETTOrchestrator.verify_ethical_audit_log()`, which delegates here. Tamper-evident within the running process only: it does not constitute an external cryptographic signature or a durable attestation outside that process.
+
+```python
+filt = EthicalFilter()
+filt.evaluate("some_action", {})
+filt.verify_audit_log()  # True
+
+filt.get_audit_log()[0]["verdict"] = "tampered"  # a copy: does not touch internal state
+filt.verify_audit_log()  # still True
+
+filt._audit_log[0]["verdict"] = "tampered"  # reaches the real internal log
+filt.verify_audit_log()  # False
+```
 
 ---
 
@@ -680,7 +704,52 @@ EthicalRuleset(
 | `reject_threshold` | `float` | Score at or above this → `REJECT`. |
 | `warn_threshold` | `float` | Score at or above this → `WARN`. |
 
-Use `add_rule(EthicalRule(...))` to add rules. Use `default_ruleset()` to get the pre-configured SETT default.
+**Methods**
+
+| Method | Returns | Description |
+|---|---|---|
+| `add_rule(rule)` | `None` | Add an `EthicalRule` to this ruleset. |
+| `get_active_rules()` | `list[EthicalRule]` | Only the rules currently `active`. |
+| `get_rule(name)` | `EthicalRule \| None` | Find a rule by name, or `None` if not present. |
+
+Use `default_ruleset()` to get the pre-configured SETT default.
+
+---
+
+### EthicalRule
+
+A single ethical rule within a ruleset: its harm category, weight, description, and whether it is currently active.
+
+```python
+EthicalRule(name, category, weight, description, active=True)
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `str` | Unique identifier within the ruleset (e.g. `"no_physical_harm"`). |
+| `category` | `HarmCategory` | Which harm category this rule belongs to. |
+| `weight` | `float` | Severity weight for this rule. Typically one of the `DEFAULT_HARM_WEIGHTS` values, but any positive float is valid for a custom ruleset. |
+| `description` | `str` | Human-readable explanation of what the rule guards against. Surfaced in audit logs and reasoning strings. |
+| `active` | `bool` | Whether this rule currently participates in evaluation. Defaults to `True`. |
+
+**Methods**
+
+| Method | Returns | Description |
+|---|---|---|
+| `activate()` | `None` | Re-enable a deactivated rule. |
+| `deactivate()` | `None` | Temporarily disable this rule without removing it from the ruleset. |
+
+```python
+from sett import EthicalRule, HarmCategory
+
+rule = EthicalRule(
+    name="no_physical_harm",
+    category=HarmCategory.PHYSICAL,
+    weight=10.0,
+    description="Action must not cause or facilitate physical harm to any person.",
+)
+ruleset.add_rule(rule)
+```
 
 ---
 
@@ -707,7 +776,50 @@ ContextAnalyzer()
 
 `analyze(action, context, emotional_state="unknown", risk_profile=None, environmental_context=None)` → `ContextAnalysis`
 
-Performs the full three-layer analysis and returns a `ContextAnalysis` with `risk_score`, `emotional_state`, `human_at_risk`, `reasoning`, `consequences`, and `risk_level`.
+Performs the full three-layer analysis and returns a `ContextAnalysis` with `risk_score`, `emotional_state`, `human_at_risk`, `reasoning`, `consequences`, `risk_level`, and `safety_assessment`.
+
+---
+
+### ContextAnalysis
+
+Result of a full three-layer context analysis. Not a dataclass (no `@dataclass` decorator), but every field below is a plain public attribute.
+
+| Field | Type | Description |
+|---|---|---|
+| `action` | `str` | The action that was analyzed. |
+| `risk_score` | `float` | Combined harm score (0.0-10.0) that the `EthicalFilter` compares against its thresholds. |
+| `emotional_state` | `str` | The emotional state passed in to `analyze()`. |
+| `reasoning` | `str` | Human-readable explanation of how the score was reached. |
+| `consequences` | `list[str]` | Possible consequences identified for this action. |
+| `human_at_risk` | `bool` | Whether a human was determined to be at risk. Defaults to `False`. |
+| `risk_level` | `RiskLevel \| None` | The environmental risk level in effect, if any (Layer 3). |
+| `safety_assessment` | `SafetyAssessment` | Separates situation urgency from action harm (see below). If not provided, defaults to a `SafetyAssessment` derived from `risk_score` and `human_at_risk` for backward compatibility with analyzers written before v0.8.0. |
+
+---
+
+### SafetyAssessment
+
+Separates the urgency of a situation from the harm of the proposed action, so that a severe human situation never automatically makes a protective response look dangerous. This is the type introduced in v0.8.0 to replace the old behavior where `human_at_risk` inflated an action's harm score directly.
+
+```python
+SafetyAssessment(
+    situation_urgency=0.0,
+    action_harm_risk=0.0,
+    omission_risk=0.0,
+    protective_action=False,
+)
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `situation_urgency` | `float` | How serious the human context is, independent of what the proposed action does. Clamped to [0.0, 10.0]. |
+| `action_harm_risk` | `float` | Estimated harm caused by the proposed action itself. Clamped to [0.0, 10.0]. |
+| `omission_risk` | `float` | Estimated harm caused by NOT acting. Clamped to [0.0, 10.0]. |
+| `protective_action` | `bool` | Set by a domain analyzer to mark an action as intended to reduce omission risk (e.g. `emergency_call`). Explicitly protective actions are never penalized for situation urgency. |
+
+Frozen (`@dataclass(frozen=True, slots=True)`): construct a new instance rather than mutating one in place.
+
+The `EthicalFilter`'s verdict is still based on `ContextAnalysis.risk_score`, not directly on `SafetyAssessment`: domain analyzers decide how these dimensions should feed into that score. The one exception is the conservative fallback described in the `EthicalFilter.evaluate()` section above: if `human_at_risk=True`, `protective_action=False`, and the score-based verdict is `ALLOW`, it is promoted to `WARN`.
 
 ---
 
@@ -863,6 +975,145 @@ Raises `SETTLLMAdapterError` if Ollama isn't reachable at `base_url`, times out,
 
 ---
 
+## services_tts_stt
+
+### TTSBase
+
+Abstract base class for all text-to-speech adapters. Same interchangeability philosophy as `LLMBase`: an Expert or Agent that needs voice output depends on `TTSBase`, never on a specific provider's SDK.
+
+```python
+class MyTTSAdapter(TTSBase):
+    @property
+    def audio_format(self):
+        return "mp3"
+
+    def synthesize(self, text, **kwargs):
+        return my_api.speak(text)
+```
+
+**Methods**
+
+| Method | Returns | Description |
+|---|---|---|
+| `synthesize(text, **kwargs)` | `bytes` | Converts text to speech audio, encoded as `audio_format`. `**kwargs` are provider-specific (voice, language, stability, etc.). |
+| `audio_format` *(property)* | `str` | The audio encoding this adapter produces (e.g. `"mp3"`, `"wav"`). |
+
+Deliberately does not play audio, write files, or touch any UI: that is an application-layer concern. Returning raw bytes keeps the adapter a pure function, testable without a speaker, a UI, or a filesystem.
+
+Concrete adapters (not exported from `sett` directly, install their optional dependency first):
+
+```python
+from sett.services_tts_stt.google import GoogleTTSAdapter       # pip install sett-framework[google-tts-stt]
+from sett.services_tts_stt.elevenlabs import ElevenLabsTTSAdapter  # pip install sett-framework[elevenlabs]
+```
+
+Both raise `SETTServiceAdapterError` on misconfiguration or provider failure (missing credentials, network error, unsupported voice, etc.).
+
+---
+
+### STTBase
+
+Abstract base class for all speech-to-text adapters. Same philosophy as `TTSBase`, mirrored for the opposite direction.
+
+```python
+class MySTTAdapter(STTBase):
+    def transcribe(self, audio, **kwargs):
+        return my_api.transcribe(audio)
+```
+
+**Methods**
+
+| Method | Returns | Description |
+|---|---|---|
+| `transcribe(audio, **kwargs)` | `str` | Converts speech audio to text. `**kwargs` are provider-specific (language_code, etc.). Returns an empty string if nothing was recognized: adapters raise `SETTServiceAdapterError` only for actual failures (network, auth, malformed audio), never for silence. |
+
+Deliberately does not own a microphone, a listening loop, or any concurrency guard: that orchestration belongs in the application/Expert layer that calls this adapter, not inside it (see the Concurrency section below).
+
+```python
+from sett.services_tts_stt.google import GoogleSTTAdapter  # pip install sett-framework[google-tts-stt]
+```
+
+`TTSBase` and `STTBase` are deliberately two separate interfaces, not one merged "voice" interface: a provider is free to implement only one of them.
+
+---
+
+## services_sentiment
+
+### SentimentBase
+
+Abstract base class for all sentiment/emotional-tone adapters. An Expert or Agent that needs a sentiment signal depends on `SentimentBase`, never on a specific provider's NLU API. Directly feeds the `emotional_state` parameter that `ContextAnalyzer.analyze()` has accepted since v0.1.1.
+
+```python
+class MySentimentAdapter(SentimentBase):
+    def analyze(self, text, **kwargs):
+        return SentimentResult(score=0.2, magnitude=0.4)
+```
+
+**Methods**
+
+| Method | Returns | Description |
+|---|---|---|
+| `analyze(text, **kwargs)` | `SentimentResult` | Analyzes the sentiment of `text`. `**kwargs` are provider-specific (language, etc.). |
+
+```python
+from sett.services_sentiment.google import GoogleSentimentAdapter  # pip install sett-framework[google-sentiment]
+```
+
+Raises `SETTServiceAdapterError` on misconfiguration or provider failure.
+
+---
+
+### SentimentResult
+
+Result of analyzing a piece of text for sentiment. Deliberately a raw signal, not a decision: mapping this to a categorical `emotional_state` string (`"calm"`, `"anxious"`, `"distressed"`, etc.) is application logic, the adapter only reports what it measured.
+
+```python
+SentimentResult(score, magnitude, sentences=())
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `score` | `float` | Overall polarity: -1.0 (very negative) to 1.0 (very positive). |
+| `magnitude` | `float` | Overall emotional intensity, regardless of polarity. Unbounded: 0.0 means emotionally neutral/flat text. |
+| `sentences` | `tuple[SentenceSentiment, ...]` | Per-sentence breakdown. Empty by default: not every provider call requests sentence-level detail. |
+
+Frozen dataclass. Sentence-level detail exists specifically to let an application compare document-level score against per-sentence scores: a contradiction between the two (e.g. "that's just great" scored positive overall but negative on the one sentence carrying the literal complaint) is a concrete, testable signal for sarcasm.
+
+---
+
+### SentenceSentiment
+
+Sentiment for a single sentence within an analyzed text.
+
+```python
+SentenceSentiment(text, score)
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `text` | `str` | The sentence text. |
+| `score` | `float` | Polarity for this sentence only: -1.0 (very negative) to 1.0 (very positive). |
+
+Frozen dataclass.
+
+---
+
+## Concurrency
+
+SETT's core components (`UniversalMemory`, `EthicalFilter`, `SETTExecutor`, `PrivateMemory`) are not evaluated under concurrent access, with one documented exception: `UniversalMemory` holds an internal lock around its store and history so that concurrent `update()` / `read()` / `publish_environmental_context()` calls do not corrupt shared state.
+
+Outside of that one guarantee, SETT does not currently make a thread-safety claim for the framework as a whole: no adapter, agent base class, or expert base class has been tested under concurrent access, and none advertises being safe for it. This applies to `PrivateMemory`, `EthicalFilter`'s audit log, `SETTExecutor`'s audit log, and the LLM/TTS/STT/sentiment adapters equally.
+
+Practical implications for a deployment:
+
+- Running multiple `SETTOrchestrator` instances in separate processes or async tasks, each with its own agents, is the supported pattern for parallelism today (this is exactly what `EnvironmentalContext` and `publish_environmental_context()` exist to coordinate across instances).
+- Sharing a single `SETTAgent`, `PrivateMemory`, or `EthicalFilter` instance across multiple threads or concurrent coroutines without external synchronization is not a tested configuration.
+- An STT adapter's `transcribe()` being called concurrently for overlapping audio streams is an application-layer concern: guard it in the calling Expert or Agent, not inside the adapter (this mirrors why `STTBase` deliberately does not own a listening loop or a lock itself).
+
+This is a documentation gap being closed, not a new restriction: the underlying behavior has not changed. A future release may extend the same lock-based pattern already used by `UniversalMemory` to other shared components if a real deployment need appears.
+
+---
+
 ## Exceptions
 
 All SETT exceptions inherit from `SETTError`.
@@ -878,6 +1129,7 @@ All SETT exceptions inherit from `SETTError`.
 | `SETTLLMAdapterError` | An LLM adapter fails to respond or is misconfigured (missing API key, network error, etc.). |
 | `SETTServiceAdapterError` | A TTS, STT, or generative AI adapter fails or is misconfigured. |
 | `SETTConfigurationError` | The framework or a component is incorrectly configured before the system starts. |
+| `SETTValidationError` | A data-carrying value fails its own validation (e.g. a `RiskProfile` pillar outside `[0.0, 1.0]`). Also inherits from `ValueError`, on purpose: catching either `SETTError` or `ValueError` catches this, the same pattern the standard library's `json.JSONDecodeError` uses. Not raised by `Action` or `BiometricReading`, which do not validate their fields. |
 
 ```python
 from sett import SETTEthicalFilterRejectedError

@@ -43,6 +43,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sett.risk_ruler.risk_level import RiskLevel
+from sett.exceptions import SETTValidationError
 
 
 @dataclass
@@ -103,12 +104,19 @@ class RiskProfile:
     )
 
     def __post_init__(self) -> None:
-        """Validate that all pillar values are within [0.0, 1.0]."""
+        """
+        Validate that all pillar values are within [0.0, 1.0].
+
+        Raises SETTValidationError, which is also a ValueError: code
+        that catches `except SETTError` (this framework's convention)
+        and code that catches `except ValueError` (the standard Python
+        idiom for constructor validation) both catch this.
+        """
         for attr in ("emotional_instability", "influence_vulnerability",
                      "collateral_damage_potential"):
             value = getattr(self, attr)
             if not 0.0 <= value <= 1.0:
-                raise ValueError(
+                raise SETTValidationError(
                     f"RiskProfile.{attr} must be between 0.0 and 1.0, got {value}"
                 )
 

@@ -9,6 +9,7 @@ This is one of the two core memory layers of SETT.
 """
 from __future__ import annotations
 from typing import Any
+from copy import deepcopy
 from datetime import datetime, timezone
 
 
@@ -55,23 +56,37 @@ class PrivateMemory:
 
     def read(self, key: str, default: Any = None) -> Any:
         """
-        Read a value from private memory.
+        Read a defensive deep copy of a value from private memory.
+
+        Mutating the returned value never affects internal state: the
+        only way to change what is stored under `key` is a subsequent
+        call to write(), which is what get_history() tracks. Before
+        this method deep-copied the value, a caller could mutate a
+        nested structure (a list or dict inside the stored value) in
+        place and silently corrupt this memory without going through
+        write() or leaving any trace in get_history().
 
         Args:
             key: The key to look up.
             default: Value to return if the key does not exist.
 
         Returns:
-            The stored value, or default if not found.
+            A deep copy of the stored value, or default if not found.
         """
-        return self._store.get(key, default)
+        return deepcopy(self._store.get(key, default))
 
     def get_all(self) -> dict[str, Any]:
         """
-        Return a copy of all private memory contents.
+        Return a defensive deep copy of all private memory contents.
         Used by the agent to compose its final output.
+
+        A shallow `dict(self._store)` copies only the top level: nested
+        values (lists, dicts) inside it remain the same objects as the
+        ones actually stored, so mutating them would still corrupt
+        internal state. deepcopy() closes that gap, matching the
+        treatment UniversalMemory already receives.
         """
-        return dict(self._store)
+        return deepcopy(self._store)
 
     def clear(self) -> None:
         """Clear all stored values. Use with caution."""

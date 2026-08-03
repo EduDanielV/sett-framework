@@ -19,7 +19,7 @@ Usage:
     from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 """
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 __author__ = "Eduardo Daniel Viñales"
 __license__ = "MIT"
 
@@ -84,6 +84,7 @@ from sett.exceptions import (
     SETTLLMAdapterError,
     SETTServiceAdapterError,
     SETTConfigurationError,
+    SETTValidationError,
 )
 
 __all__ = [
@@ -137,4 +138,5 @@ __all__ = [
     "SETTLLMAdapterError",
     "SETTServiceAdapterError",
     "SETTConfigurationError",
+    "SETTValidationError",
 ]

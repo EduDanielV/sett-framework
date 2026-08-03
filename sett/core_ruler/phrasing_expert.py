@@ -105,6 +105,19 @@ class PhrasingExpert(SETTExpert):
         """
         super().__init__(name=name)
         self._llm = llm
+        if type(self).resolve is not PhrasingExpert.resolve:
+            logger.warning(
+                "[%s] overrides PhrasingExpert.resolve(), which its "
+                "own docstring documents as a template method that "
+                "subclasses should not override (implement "
+                "determine_facts(), build_prompt(), and fallback_text() "
+                "instead). This is a warning, not a block: SETT "
+                "enforces this contract by convention, not by runtime "
+                "restriction, but bypassing it means the LLM-proposes/"
+                "logic-disposes separation this class exists to "
+                "guarantee no longer holds for this expert.",
+                self.__class__.__name__,
+            )
 
     def resolve(self, context: dict[str, Any]) -> dict[str, Any]:
         """

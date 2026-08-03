@@ -2,6 +2,92 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.9.0] - 2026-07-27
+
+Eight decisions from a full public-API audit performed after v0.8.0's
+first release (a symbol-by-symbol inventory, then a phased pass over
+naming, signatures, exceptions, mutability, subclassing contracts,
+documentation, concurrency posture, and import surface). Same
+methodology as always: nothing accepted from a summary, every finding
+reproduced against the actual source before deciding on a fix. All
+eight were accepted; none were rejected.
+
+### Added
+- `SETTOrchestrator.verify_ethical_audit_log()`: delegates to
+  `EthicalFilter.verify_audit_log()`, reachable from the orchestrator
+  itself instead of requiring access to the private `_ethical_filter`
+  attribute. Closes a real gap the audit found: v0.8.0's tamper-evidence
+  guarantee was invisible to anyone using only the documented entry
+  point.
+- `SETTValidationError(SETTError, ValueError)`: deliberate multiple
+  inheritance, the same pattern the standard library's own
+  `json.JSONDecodeError` uses. `RiskProfile.__post_init__` now raises
+  this instead of a plain `ValueError`; both `except SETTError` and
+  `except ValueError` catch it. Not extended to `Action` /
+  `BiometricReading` / `EnvironmentalContext`: no real case yet
+  justifies validating them, noted as a candidate rather than applied
+  speculatively.
+- A non-blocking warning (logged, not raised) when a `PhrasingExpert`
+  subclass overrides `resolve()` against its own documented "template
+  method, do not override" contract. Fires at instantiation, and does
+  not prevent the override from working: consistent with this
+  project's "convention, not magic" stance elsewhere in the framework,
+  while still surfacing a silent contract violation that previously
+  left no trace at all.
+
+### Fixed
+- `tests/test_elevenlabs_adapter.py` now guards with
+  `pytest.importorskip("requests")`. Previously, a bare install (`pip
+  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
+  FAIL instead of skip, contradicting the project's own documented
+  install instructions. Retroactive fix, applied 2026-07-29 - this
+  version was never published, so it is patched in place rather than
+  superseded by a new release.
+- `PrivateMemory.read()` and `get_all()` returned mutable references
+  into internal state: a caller mutating a nested value (a list or
+  dict inside what was returned) could corrupt stored data without
+  ever calling `write()`, leaving no trace in `get_history()`. Both
+  now return `deepcopy()`s, the same treatment `UniversalMemory`
+  already received in v0.8.0.
+
+### Removed
+- `sett/services_gen_ai/`: an empty scaffold module (a one-line
+  docstring, no classes, no functions, not referenced by
+  `sett/__init__.py`, any doc, or any `pyproject.toml` extra) since
+  v0.1.0. Unlike `StubDomainAgent`, which is explicit, honest
+  scaffolding, an unreferenced empty directory reads as an unfinished
+  promise rather than an active placeholder. Will be recreated with
+  real content if a concrete use case appears.
+
+### Docs
+- `api_reference.md`: documented `SafetyAssessment`, `ContextAnalysis`,
+  `TTSBase`, `STTBase`, `SentimentBase`, `SentimentResult`, and
+  `SentenceSentiment`: all public, exported, used in real tests, and
+  previously undocumented. Added a field table for `EthicalRule`
+  (previously a single usage-example line). Documented
+  `EthicalFilter.verify_audit_log()` /
+  `SETTOrchestrator.verify_ethical_audit_log()`, and added `sequence`,
+  `previous_hash`, and `entry_hash` to both audit log field lists.
+  Added an explicit Concurrency section: no thread-safety guarantee for
+  the framework as a whole beyond `UniversalMemory`'s internal lock,
+  which already existed in code but had never been written down
+  anywhere a real adopter would read it.
+
+### Validation
+- 11 new tests covering all four code-level changes above
+  (`tests/test_hardening_public_api_audit.py`), including the same
+  adversarial mutation pattern already used for `UniversalMemory` in
+  v0.8.0, applied now to `PrivateMemory`.
+- Test suite: 275 passing tests (264 before this round).
+
+### Compatibility
+- Low risk, but not zero, so noted explicitly rather than folded
+  silently into "Fixed": `import sett.services_gen_ai` now raises
+  `ModuleNotFoundError` instead of importing an empty module. `RiskProfile`
+  now raises `SETTValidationError` instead of a plain `ValueError`; existing
+  `except ValueError` handlers keep working unchanged, since
+  `SETTValidationError` is one. No other public signature changed.
+
 ## [0.8.0] - 2026-07-25
 
 ### Security and contract hardening
@@ -46,14 +132,13 @@ All notable changes to the SETT framework are documented here.
 
 ## [0.7.0] - 2026-07-23
 
-Three additive, backward-compatible pieces, bumped together per
-Convención #21 ("no fragmentar dos piezas de trabajo ya terminadas en
-releases separados si van a publicarse en el mismo momento") rather
-than as three separate releases. Confirmed explicitly with Dan
-(2026-07-23): not gated on the remaining plan points of the
-consumer application that motivated this work (multi-user
-permissions, module-proposal self-improvement): per Convención #19,
-finished work doesn't wait on decisions that have no date attached.
+Three additive, backward-compatible pieces, bumped together per Convention
+#21 ("don't fragment two already-finished pieces of work into separate
+releases if they're going to be published at the same time") rather than as
+three separate releases. Not gated on the remaining plan points of the
+consumer application that motivated this work (multi-user permissions,
+module-proposal self-improvement): per Convention #19, finished work
+doesn't wait on decisions that have no date attached.
 
 ### Added
 - `sett/services_tts_stt/base.py`: `TTSBase` and `STTBase`, the first
@@ -78,7 +163,7 @@ finished work doesn't wait on decisions that have no date attached.
 - New optional-dependency extras in `pyproject.toml`: `google-tts-stt`
   (`google-cloud-texttospeech`, `google-cloud-speech`) and `elevenlabs`
   (`requests`). Core framework still has zero mandatory dependencies.
-- Convención #22 in `SETT_Convenciones_v2.md`: service adapters are
+- Convention #22 in `SETT_Conventions_v2.md`: service adapters are
   explicitly outside the Agent/Expert growth tree (#1): no
   `PrivateMemory`, no orchestrator registration, not a filter subject,
   and the naming taxonomy (`...Base`, `...Adapter`, `...Agent`/`...Expert`,
@@ -109,7 +194,7 @@ finished work doesn't wait on decisions that have no date attached.
   (text generation, not sentiment analysis) were both left out on
   purpose, not merely trimmed for size.
 - `google-sentiment` extra (`google-cloud-language`) in `pyproject.toml`.
-- Convención #23 in `SETT_Convenciones_v2.md`: "ruler" is reserved for
+- Convention #23 in `SETT_Conventions_v2.md`: "ruler" is reserved for
   the framework's own foundational pillars (`core_ruler`, `ethics_ruler`,
   `memory_ruler`, `risk_ruler`), not for important domain Agents; this
   clarifies where it sits relative to #1 (Agent/Expert) and #22 (Adapter).
@@ -131,10 +216,10 @@ finished work doesn't wait on decisions that have no date attached.
   (150/40 bpm, 39.5/35.0°C): this is a relocation, not a
   recalibration. `_detect_human_at_risk`'s behavior is unchanged byte
   for byte; `test_ethics.py` was not modified and still passes.
-- Convención #23 amended with the concrete reasoning for why
+- Convention #23 amended with the concrete reasoning for why
   `biometric_ruler` was built now while an `Emotion_Ruler` for
   sentiment was deliberately not: biometrics already caused a real,
-  documented bug (v0.1.1), actual "extraído del uso" (#15) evidence, 
+  documented bug (v0.1.1), actual "extracted from use" (#15) evidence,
   while the sentiment adapter added in this same release has zero
   downstream consumers yet.
 - 21 new tests for `BiometricReading` (parsing, thresholds, boundaries,
@@ -145,10 +230,11 @@ finished work doesn't wait on decisions that have no date attached.
 - Eight literal mentions of a consumer application's internal codename
   (in CHANGELOG.md, two adapter example docstrings, and three test
   fixtures) that had accumulated across this same release, in
-  violation of Convención #20: found by a manual sweep ahead of
+  violation of Convention #20: found by a manual sweep ahead of
   preparing this release for public visibility. Docs/tests only, no
-  public API touched: stays under this same 0.7.0, per Convención #21
-  ("solo docs → sin release nuevo si el paquete no cambia").
+  public API touched: stays under this same 0.7.0, per Convention #21
+  ("docs only → commit or patch, no new release if the package itself
+  doesn't change").
 - Second incident, found AFTER the fix above had already been pushed:
   a ninth mention (`services_tts_stt/elevenlabs.py`'s docstring,
   a file path containing the codename) had slipped past the new guard
@@ -179,7 +265,7 @@ finished work doesn't wait on decisions that have no date attached.
   counts as "distressed" vs "anxious" for `EMOTIONAL_RISK_MODIFIERS`,
   or connect to `PhrasingExpert` so generation reflects the detected
   tone. Both are the next step (an application-level
-  `SentimentAnalyzerAgent`, per Convención #23): this release is the
+  `SentimentAnalyzerAgent`, per Convention #23): this release is the
   adapter the slot has been waiting for, not the agent that will use
   it.
 
@@ -331,7 +417,8 @@ finished work doesn't wait on decisions that have no date attached.
 ### Fixed
 - `templates/agent_template.py`, `templates/expert_template.py`, and
   `templates/README.md` were mistakenly published with all comments,
-  docstrings, and TODOs in Spanish (Dan's own working language) while
+  docstrings, and TODOs in Spanish (the maintainer's own working
+  language) while
   the rest of the repository is in English. This was an oversight:
   the working notes weren't translated back before publishing. All
   three files are now in English; the code itself never changed (it

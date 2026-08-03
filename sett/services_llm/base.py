@@ -7,8 +7,8 @@ This ensures SETT is not tied to any specific language model.
 Swap Claude for GPT, Gemini, or a local model by changing
 the adapter: no other code needs to change.
 
-Following the same intercambiability philosophy for TTS/STT in services_tts_stt/
-and generative AI in services_gen_ai/.
+Following the same interchangeability philosophy for TTS/STT in
+services_tts_stt/ and sentiment analysis in services_sentiment/.
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod

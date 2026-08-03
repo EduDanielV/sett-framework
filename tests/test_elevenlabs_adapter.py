@@ -7,6 +7,12 @@ mocks `urllib.request.urlopen`: no live API key or network access
 required.
 """
 import pytest
+
+pytest.importorskip(
+    "requests",
+    reason="ElevenLabsTTSAdapter needs the 'requests' package (extra: [elevenlabs])",
+)
+
 from unittest.mock import patch, MagicMock
 
 from sett.services_tts_stt.elevenlabs import ElevenLabsTTSAdapter

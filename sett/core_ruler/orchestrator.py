@@ -411,6 +411,19 @@ class SETTOrchestrator:
         """
         return self._ethical_filter.get_audit_log()
 
+    def verify_ethical_audit_log(self) -> bool:
+        """
+        Verify the sequence and hash chain of the ethical audit log
+        returned by get_ethical_audit_log().
+
+        Delegates to EthicalFilter.verify_audit_log(): the same
+        tamper-evidence guarantee added in v0.8.0, made reachable from
+        the orchestrator, the entry point every example in the docs
+        already uses, instead of requiring access to the private
+        `_ethical_filter` attribute.
+        """
+        return self._ethical_filter.verify_audit_log()
+
     @property
     def registered_domains(self) -> list[str]:
         """List of all registered agent domains."""
