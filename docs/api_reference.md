@@ -295,13 +295,14 @@ from sett import PhrasingExpert
 PhrasingExpert(name, llm=None)
 ```
 
-Subclasses implement three methods instead of `resolve()` directly: `resolve()` is a template method you should not override:
+Subclasses implement up to four methods instead of `resolve()` directly (the first three required, the fourth optional): `resolve()` is a template method you should not override:
 
 | Method | Description |
 |---|---|
 | `determine_facts(context)` → `dict` | Pure deterministic logic: no LLM involved. Returns what's true regardless of how it ends up phrased. |
 | `build_prompt(facts, context)` → `str` | Describes, in natural language, what the LLM should say based on the facts already computed. Never pass raw, unprocessed context the LLM could misread as license to invent additional facts. |
 | `fallback_text(facts, context)` → `str` | The deterministic text used when there's no LLM configured, or when the call fails for any reason. Must always produce a valid result on its own. |
+| `verify_facts(phrased, facts, context)` → `str` (optional, added in 0.10.0) | Called after `phrased` already exists (from the LLM or from `fallback_text()`), to validate the actual text against facts already known and swap it out if it contradicts them. Default: returns `phrased` unchanged. |
 
 | Class attribute | Description |
 |---|---|

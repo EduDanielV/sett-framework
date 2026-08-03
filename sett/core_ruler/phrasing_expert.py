@@ -22,8 +22,23 @@ The contract:
        back to a deterministic text: implement fallback_text(). The
        LLM is an enhancement, never a requirement for this expert to
        do its job.
-    4. The result is RETURNED to the owning Agent; a PhrasingExpert
+    4. Optionally, once the LLM HAS produced text, verify it against
+       facts already known and swap it out if it contradicts them:
+       implement verify_facts(). Most subclasses don't need this and
+       can skip it entirely (default: no-op, the phrased text passes
+       through unchanged).
+    5. The result is RETURNED to the owning Agent; a PhrasingExpert
        never publishes anything itself: same as every SETTExpert.
+
+v0.10.0 added step 4 (verify_facts()), for the same reason the whole
+class exists: it emerged independently twice more in that same
+downstream project (a greeting that must never contradict the real
+time of day, and a reply that must never assert the wrong name for the
+user), each time as a full override of resolve() just to insert one
+check after the LLM already answered. That repetition - the same
+signal that created this class in the first place - is why the hook is
+now part of the contract instead of something every subclass has to
+reinvent by breaking it.
 """
 from __future__ import annotations
 from abc import abstractmethod
@@ -44,7 +59,8 @@ class PhrasingExpert(SETTExpert):
     a synthesized summary, a redacted alert. Anything a human will
     read or hear.
 
-    Subclasses implement three methods instead of resolve() directly:
+    Subclasses implement up to four methods instead of resolve()
+    directly - the first three are required, the fourth is optional:
 
         determine_facts(context) -> dict
             Pure deterministic logic. No LLM involved. This is the
@@ -62,6 +78,17 @@ class PhrasingExpert(SETTExpert):
             configured, or when the LLM call fails for any reason.
             This is what the user gets today, with zero LLM cost:
             the LLM only makes it sound better, never makes it work.
+
+        verify_facts(phrased, facts, context) -> str
+            Optional. Called AFTER the LLM (or fallback_text()) has
+            already produced `phrased` - the LLM answered fine from
+            SETT's point of view, but what it actually said might
+            still be wrong (e.g. it agreed with the user's own wrong
+            assumption instead of the fact it was given). Return
+            `phrased` unchanged if it holds up; return
+            `self.fallback_text(facts, context)` (or anything else) to
+            replace it. Default: returns `phrased` unchanged - most
+            subclasses don't need this at all.
 
     The phrased text is merged into the facts dict under the key named
     by OUTPUT_KEY (override it per subclass: e.g. "greeting",
@@ -121,16 +148,19 @@ class PhrasingExpert(SETTExpert):
 
     def resolve(self, context: dict[str, Any]) -> dict[str, Any]:
         """
-        Template method: computes facts deterministically, then
-        phrases them (via LLM if available, else the fallback text),
-        and returns both merged together.
+        Template method: computes facts deterministically, phrases
+        them (via LLM if available, else the fallback text), verifies
+        the result against facts (no-op unless overridden), and
+        returns everything merged together.
 
         Subclasses should not override this: implement
-        determine_facts(), build_prompt(), and fallback_text() instead.
+        determine_facts(), build_prompt(), fallback_text(), and
+        (optionally) verify_facts() instead.
         """
         facts = self.determine_facts(context)
         phrased = self._phrase(facts, context)
-        return {**facts, self.OUTPUT_KEY: phrased}
+        verified = self.verify_facts(phrased, facts, context)
+        return {**facts, self.OUTPUT_KEY: verified}
 
     @abstractmethod
     def determine_facts(self, context: dict[str, Any]) -> dict[str, Any]:
@@ -158,6 +188,25 @@ class PhrasingExpert(SETTExpert):
         its own: this is what makes the LLM optional, not required.
         """
         ...
+
+    def verify_facts(
+        self, phrased: str, facts: dict[str, Any], context: dict[str, Any]
+    ) -> str:
+        """
+        Optional fourth hook (see class docstring), called once
+        `phrased` already exists - from the LLM if it was configured
+        and succeeded, from fallback_text() otherwise. Default: no
+        verification, `phrased` passes through unchanged.
+
+        Override when the LLM succeeding isn't enough of a guarantee:
+        what it actually said still needs to be checked against facts
+        already known (never against free-form interpretation - this
+        should be closed, deterministic pattern matching, same spirit
+        as everything else in this class). Return `phrased` if it's
+        fine, or replace it (typically with
+        `self.fallback_text(facts, context)`) if it isn't.
+        """
+        return phrased
 
     def _phrase(self, facts: dict[str, Any], context: dict[str, Any]) -> str:
         """

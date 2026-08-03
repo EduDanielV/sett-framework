@@ -18,6 +18,7 @@ from typing import Any
 import logging
 
 from sett.core_ruler.agent import SETTAgent
+from sett.core_ruler.executor import SETTExecutor
 from sett.memory_ruler.universal import UniversalMemory
 from sett.ethics_ruler.ethic_kernel.filter import EthicalFilter
 from sett.risk_ruler.risk_level import RiskLevel
@@ -83,7 +84,7 @@ class SETTOrchestrator:
             agent.name, agent.domain
         )
 
-    def register_executor(self, executor) -> None:
+    def register_executor(self, executor: SETTExecutor) -> None:
         """
         Register a SETTExecutor with this orchestrator. Gives it access
         to universal memory (so it can evaluate actions through the

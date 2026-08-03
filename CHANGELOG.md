@@ -2,6 +2,49 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.10.0] - 2026-07-28
+
+### Added
+- `PhrasingExpert.verify_facts(phrased, facts, context) -> str`: an
+  optional fourth hook, called after `phrased` already exists (from
+  the LLM if configured and successful, from `fallback_text()`
+  otherwise), letting a subclass validate the ACTUAL text against
+  facts already known and swap it out if it contradicts them. Default
+  implementation is a pass-through (`return phrased`), so every
+  existing subclass keeps behaving exactly as before with zero changes
+  required. `resolve()` now calls it as part of its template:
+  `determine_facts -> _phrase -> verify_facts`.
+  Motivated by a second-hand finding during an external audit: two
+  independent subclasses in a downstream project each needed this
+  same post-hoc check (a greeting that must never contradict the real
+  time of day; a reply that must never assert the wrong name for the
+  user) and, with no sanctioned hook for it, each had fully overridden
+  `resolve()` just to insert one verification step - triggering the
+  v0.9.0 override warning in the process. Same origin story as
+  `PhrasingExpert` itself (see its class docstring): an unplanned
+  repetition across independent call sites is the signal that
+  something belongs in the framework, not copy-pasted per project.
+- `SETTOrchestrator.register_executor(self, executor: SETTExecutor)`:
+  added the missing type hint on `executor` (residual item from the
+  v0.8.0 audit, never part of the 8 accepted fixes). Zero behavior
+  change.
+
+### Fixed
+- `tests/test_elevenlabs_adapter.py` now guards with
+  `pytest.importorskip("requests")`. Previously, a bare install (`pip
+  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
+  FAIL instead of skip, contradicting the project's own documented
+  install instructions. Retroactive fix, applied 2026-07-29 - this
+  version was never published, so it is patched in place rather than
+  superseded by a new release.
+
+### Compatibility
+- Fully backward compatible: `verify_facts()` is optional with a
+  no-op default, and does not change `PhrasingExpert`'s existing
+  abstract contract (`determine_facts`/`build_prompt`/`fallback_text`
+  are still the only required overrides).
+- 280 tests (up from 275).
+
 ## [0.9.0] - 2026-07-27
 
 Eight decisions from a full public-API audit performed after v0.8.0's
@@ -36,13 +79,6 @@ eight were accepted; none were rejected.
   left no trace at all.
 
 ### Fixed
-- `tests/test_elevenlabs_adapter.py` now guards with
-  `pytest.importorskip("requests")`. Previously, a bare install (`pip
-  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
-  FAIL instead of skip, contradicting the project's own documented
-  install instructions. Retroactive fix, applied 2026-07-29 - this
-  version was never published, so it is patched in place rather than
-  superseded by a new release.
 - `PrivateMemory.read()` and `get_all()` returned mutable references
   into internal state: a caller mutating a nested value (a list or
   dict inside what was returned) could corrupt stored data without

@@ -177,6 +177,13 @@ class TestPhrasingExpertWithAgent:
         assert result["greeting"] == "Hey there! Beautiful morning, isn't it?"
         assert result["time_of_day"] == "morning"
 
+    def test_verify_facts_default_is_a_pass_through(self):
+        """Sin override, verify_facts() no cambia nada - el default de
+        v0.10.0 debe ser indistinguible del comportamiento pre-v0.10.0."""
+        expert = GreetingLikeExpert(name="greeting", llm=FakeLLM())
+        result = expert.resolve({"hour": 8})
+        assert result["greeting"] == "Hey there! Beautiful morning, isn't it?"
+
     def test_private_memory_still_accessible_from_within(self):
         class MemoWritingExpert(PhrasingExpert):
             OUTPUT_KEY = "text"
@@ -206,3 +213,90 @@ class TestPhrasingExpertWithAgent:
         o.register_agent(agent)
         o.process({"some": "data"}, domain="memo_test")
         assert agent._private_memory.read("last_context") == {"some": "data"}
+
+
+# ── verify_facts() (v0.10.0): the 4th, optional hook ─────────────────────
+# Motivado por dos subclases independientes en un proyecto downstream
+# que necesitaban exactamente esto y terminaban sobreescribiendo
+# resolve() entero para conseguirlo - ver docstring de la clase.
+
+class StrictGreetingExpert(PhrasingExpert):
+    """Igual a GreetingLikeExpert, pero rechaza cualquier frase que
+    contradiga el time_of_day real - la misma forma que necesitaron,
+    de manera independiente, las dos subclases que motivaron este
+    hook (ver docstring de la clase)."""
+
+    OUTPUT_KEY = "greeting"
+
+    def determine_facts(self, context):
+        hour = context.get("hour", 9)
+        time_of_day = "morning" if hour < 12 else "afternoon"
+        return {"time_of_day": time_of_day}
+
+    def build_prompt(self, facts, context):
+        return f"Greet the user. It's {facts['time_of_day']}."
+
+    def fallback_text(self, facts, context):
+        return {"morning": "Good morning.", "afternoon": "Good afternoon."}[facts["time_of_day"]]
+
+    def verify_facts(self, phrased, facts, context):
+        wrong_word = {"morning": "afternoon", "afternoon": "morning"}[facts["time_of_day"]]
+        if wrong_word in phrased.lower():
+            return self.fallback_text(facts, context)
+        return phrased
+
+
+class ContradictingLLM(LLMBase):
+    """Redacta bien en la forma, pero contradice el hecho real a propósito."""
+    @property
+    def model_name(self):
+        return "contradicting"
+    def complete(self, prompt, system="", **kwargs):
+        return "Good afternoon, hope you slept well!"
+    def chat(self, messages, system="", **kwargs):
+        return self.complete(messages[-1]["content"] if messages else "", system)
+
+
+class TestPhrasingExpertVerifyFacts:
+
+    def test_override_can_discard_a_contradicting_llm_response(self):
+        expert = StrictGreetingExpert(name="greeting", llm=ContradictingLLM())
+        result = expert.resolve({"hour": 8})   # morning real
+        assert result["greeting"] == "Good morning."   # fallback, no lo del LLM
+
+    def test_override_lets_a_correct_llm_response_through(self):
+        expert = StrictGreetingExpert(name="greeting", llm=FakeLLM())   # dice "morning"
+        result = expert.resolve({"hour": 8})   # morning real, coincide
+        assert result["greeting"] == "Hey there! Beautiful morning, isn't it?"
+
+    def test_verify_facts_also_runs_on_fallback_text_not_only_llm_output(self):
+        """verify_facts() corre siempre después de _phrase(), sin LLM
+        configurado también - fallback_text() ya es correcto por
+        construcción acá, así que debe pasar sin cambios."""
+        expert = StrictGreetingExpert(name="greeting")   # sin LLM
+        result = expert.resolve({"hour": 8})
+        assert result["greeting"] == "Good morning."
+
+    def test_overriding_verify_facts_does_not_trigger_the_resolve_override_warning(self):
+        """El punto entero del hook: no hace falta tocar resolve() para
+        conseguir esto, así que el warning de "overrides resolve()" no
+        debería dispararse - a diferencia de un subclase vieja que sí
+        sobreescribe resolve() directamente."""
+        import logging
+
+        class NoisyRecorder(logging.Handler):
+            def __init__(self):
+                super().__init__()
+                self.records = []
+            def emit(self, record):
+                self.records.append(record.getMessage())
+
+        handler = NoisyRecorder()
+        logger = logging.getLogger("sett.core_ruler.phrasing_expert")
+        logger.addHandler(handler)
+        try:
+            StrictGreetingExpert(name="greeting")
+        finally:
+            logger.removeHandler(handler)
+
+        assert not any("overrides PhrasingExpert.resolve()" in m for m in handler.records)

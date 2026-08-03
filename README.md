@@ -6,8 +6,18 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21287133-blue)](https://doi.org/10.5281/zenodo.21287133)
 
-**Current source release: 0.9.0**: closes the gaps found in a full public-API
-audit of 0.8.0. Defensive copies now match on both memory layers, audit log
+**Current source release: 0.10.0**: `PhrasingExpert` gained a fourth,
+optional hook, `verify_facts(phrased, facts, context)`, for validating
+already-phrased text against known facts and swapping it out if it
+contradicts them - motivated by two independent downstream subclasses that
+each needed exactly this and had to override `resolve()` wholesale to get
+it (external-audit finding). Fully backward compatible: the default is a
+pass-through, existing subclasses are unaffected. Also closes a residual
+type-hint gap on `SETTOrchestrator.register_executor()` from the 0.8.0
+audit. See [`CHANGELOG.md`](CHANGELOG.md) for the full entry.
+
+Previous release, 0.9.0, closed the gaps found in a full public-API audit
+of 0.8.0: defensive copies now match on both memory layers, audit log
 verification is reachable directly from the orchestrator, subclassing
 PhrasingExpert against its own contract now warns instead of failing
 silently, and every public symbol is documented, including a new explicit
