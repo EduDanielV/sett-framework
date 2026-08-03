@@ -2,6 +2,81 @@
 
 All notable changes to the SETT framework are documented here.
 
+## [0.11.0] - 2026-07-29
+
+### Added
+- Immutable `ExecutionContext` with generated or caller-supplied
+  `trace_id`/`run_id`, causal `parent_id`, UTC creation time, opaque
+  application/instance/subject/session/turn identifiers, recursively frozen
+  size-bounded metadata, and `derive()` for child operations.
+- Run-local propagation using `contextvars`. Context is bound only while a
+  component executes and is always reset, including after rejection and
+  exceptions.
+- `TraceEvent` and per-orchestrator `TraceRecorder`: thread-safe structured
+  events, monotonic sequence, SHA-256 hash chain, immediate `cause_id`
+  references, parent-run verification, sanitized export, and exporter hooks.
+- End-to-end instrumentation for routing, broadcast, agents, registered
+  experts, native pipeline stages, universal-memory publication, ethical
+  decisions, action proposals, handlers, results, rejections, and errors.
+- `SETTOrchestrator.get_trace()`, `export_trace()`,
+  `register_trace_exporter()`, `verify_traces()`, and `last_trace_id`.
+- `SETTOrchestrator.process_traced()` and immutable `TracedResult` for callers
+  that need the result and trace identity together.
+- Stable generated `Action.action_id` for causal effect correlation.
+- `tests/test_execution_context_v011.py`, covering context isolation,
+  immutability, causal paths, privacy, compatibility, pipelines, broadcasts,
+  actions, failures, and fail-closed exporter behavior.
+- `docs/execution_context_v0.11_design.md` and `MIGRATION_v0.11.md`.
+
+### Security
+- Traces record operational metadata only. Input payloads, action payloads,
+  handler return values, exception messages/locals, biometric values, risk
+  profiles, prompts, model responses, and private-memory values are excluded
+  by default.
+- Sensitive metadata keys and non-JSON objects are rejected. Metadata is
+  bounded to 32 top-level keys, depth 8, and 16 KiB serialized.
+- `handler.authorized` is the committed pre-effect boundary. A registered
+  exporter failure there records `handler.blocked`, raises
+  `SETTConfigurationError`, and never emits `handler.started` or invokes the
+  real-world handler.
+- Trace exports are defensive copies. Hash and causal verification detects
+  mutation, removal, reordering, duplicate IDs, cross-trace/forward causes,
+  invalid parent runs, and incomplete instrumented operations.
+- Public recorder attributes are deeply immutable and enforce the same limits
+  as execution metadata, including rejection of non-finite numbers, sensitive
+  keys, unsupported values, excessive depth, key count, and serialized size.
+- Pipeline validation, transformation errors, routing failures, expert/agent
+  errors, and exporter failures now close every opened boundary with an exact
+  terminal event and immediate causal link.
+
+### Fixed
+- `tests/test_elevenlabs_adapter.py` now guards with
+  `pytest.importorskip("requests")`. Previously, a bare install (`pip
+  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
+  FAIL instead of skip, contradicting the project's own documented
+  install instructions. Retroactive fix, applied 2026-07-29 - inherited
+  unchanged from 0.10.1 and earlier, now fixed here and back-patched
+  into every unpublished prior version (0.9.0, 0.10.0, 0.10.1).
+- `docs/api_reference.md`'s Concurrency section now lists `TraceRecorder`
+  as a second documented thread-safety exception alongside
+  `UniversalMemory`. The guarantee itself was already real (`TraceRecorder`
+  has held an internal `threading.RLock()` around `record()` since it was
+  introduced above) - the docs simply hadn't been updated to say so.
+  Retroactive fix, applied 2026-08-01, found by an independent public-API
+  audit.
+
+### Compatibility
+- `SETTAgent.process(input_data)`, `SETTExpert.resolve(context)`, existing
+  executor handler signatures, `SETTOrchestrator.process()`, broadcasts, and
+  pipelines remain source-compatible.
+- Context parameters are additive and keyword-only at orchestrator entry
+  points.
+- The complete 0.10.1 suite passes unchanged.
+- The private companion-assistant reference application's complete baseline
+  suite passes against this source release without application code changes.
+- SETT suite: 340 passed, including 50 execution-context/trace contract
+  tests. Reference compatibility suite: 841 passed.
+
 ## [0.10.1] - 2026-07-28
 
 Four rounds of documentation/consistency fixes, all found and fixed the
@@ -9,15 +84,6 @@ same day, before any of them were published - squashed into this single
 release rather than four separate ones (same reasoning as v0.7.0's own
 three-pieces-in-one-release precedent: nothing here was ever shipped
 individually, so there is no history to preserve by keeping them apart).
-
-### Fixed
-- `tests/test_elevenlabs_adapter.py` now guards with
-  `pytest.importorskip("requests")`. Previously, a bare install (`pip
-  install -e .`, without the `[elevenlabs]` extra) made these 12 tests
-  FAIL instead of skip, contradicting the project's own documented
-  install instructions. Retroactive fix, applied 2026-07-29 - this
-  version was never published, so it is patched in place rather than
-  superseded by a new release.
 
 ### Docs
 - `docs/security_model.md` claimed `PrivateMemory` "intentionally retains
@@ -251,13 +317,14 @@ eight were accepted; none were rejected.
 
 ## [0.7.0] - 2026-07-23
 
-Three additive, backward-compatible pieces, bumped together per Convention
-#21 ("don't fragment two already-finished pieces of work into separate
-releases if they're going to be published at the same time") rather than as
-three separate releases. Not gated on the remaining plan points of the
-consumer application that motivated this work (multi-user permissions,
-module-proposal self-improvement): per Convention #19, finished work
-doesn't wait on decisions that have no date attached.
+Three additive, backward-compatible pieces, bumped together per
+Convention #21 ("don't fragment two already-finished pieces of work
+into separate releases if they're going to be published at the same
+time") rather than as three separate releases. Not gated on the
+remaining plan points of the
+consumer application that motivated this work (multi-user
+permissions, module-proposal self-improvement): per Convention #19,
+finished work doesn't wait on decisions that have no date attached.
 
 ### Added
 - `sett/services_tts_stt/base.py`: `TTSBase` and `STTBase`, the first

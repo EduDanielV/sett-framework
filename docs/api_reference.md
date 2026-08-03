@@ -50,7 +50,7 @@ Raises `SETTAgentNotFoundError` if no agent is registered for the given domain.
 
 ---
 
-`process(input_data, domain=None, emotional_state="unknown")` → `dict`
+`process(input_data, domain=None, emotional_state="unknown", location_id="global", *, execution_context=None)` → `dict`
 
 Process input through the system. Routes to a specific agent if `domain` is given; broadcasts to all agents if not.
 
@@ -59,6 +59,8 @@ Process input through the system. Routes to a specific agent if `domain` is give
 | `input_data` | `dict` | The data to process. |
 | `domain` | `str \| None` | If provided, routes to that agent only. |
 | `emotional_state` | `str` | Detected emotional state of the user. Passed to the EthicalFilter. |
+| `location_id` | `str` | Environmental-context location key. |
+| `execution_context` | `ExecutionContext \| None` | Optional explicit root context. A fresh root is created when omitted. |
 
 Returns the result dict from the agent (or a `{domain: result}` dict when broadcasting).
 
@@ -66,9 +68,110 @@ Raises `SETTEthicalFilterRejectedError` if the EthicalFilter blocks any agent's 
 
 ---
 
+`process_traced(input_data, domain=None, emotional_state="unknown", location_id="global", *, execution_context=None)` → `TracedResult`
+
+Runs the same path as `process()` and returns an immutable envelope containing
+`result`, `trace_id`, and the root `context`.
+
+---
+
+`get_trace(trace_id)` → `tuple[TraceEvent, ...]`
+
+Return immutable structured events for one trace.
+
+---
+
+`export_trace(trace_id, *, view="sanitized")` → `tuple[dict, ...]`
+
+Return defensive privacy-safe dictionaries. `view` is `"sanitized"` or
+`"summary"`.
+
+---
+
+`register_trace_exporter(exporter)` → `None`
+
+Register a callable that receives each defensive sanitized event. Exporter
+failure at the pre-effect handler boundary blocks the handler.
+
+---
+
+`verify_traces(trace_id=None)` → `bool`
+
+Verify sequence, SHA-256 links, causes, and parent execution nodes. With no
+identifier, verifies the complete recorder.
+
+---
+
+`last_trace_id` → `str | None`
+
+Most recently started trace. Intended for sequential debugging; use explicit
+contexts or `process_traced()` in concurrent callers.
+
+---
+
 `read_universal_memory()` → `dict`
 
 Snapshot of all agent results currently in universal memory. Does not include environmental context entries.
+
+---
+
+### ExecutionContext
+
+Immutable identity for one execution node.
+
+```python
+ExecutionContext.create(
+    trace_id=None,
+    run_id=None,
+    application_id=None,
+    instance_id=None,
+    subject_id=None,
+    session_id=None,
+    turn_id=None,
+    metadata=None,
+)
+```
+
+| Field | Meaning |
+|---|---|
+| `trace_id` | Complete causal execution tree. |
+| `run_id` | This execution node. |
+| `parent_id` | Immediate parent node's `run_id`, or `None` for a root. |
+| `created_at` | Timezone-aware UTC creation time. |
+| optional identifiers | Opaque application correlation values. |
+| `metadata` | Recursively frozen, validated JSON-safe metadata. |
+
+`derive(*, metadata=None)` creates a child with the same trace ID, a new run
+ID, and the current run ID as parent.
+
+`safe_view()` returns a defensive JSON-safe representation.
+
+`current_execution_context()` returns the context active in the current
+thread/task, or `None`.
+
+### TracedResult
+
+Immutable envelope with `result`, `trace_id`, and root `context`.
+
+### TraceEvent
+
+Immutable event containing execution identity, immediate `cause_id`, timestamp,
+sequence, kind, component, status, reason codes, safe attributes, and hash-chain
+fields. Attributes are recursively immutable, including nested mappings and
+sequences.
+
+### TraceRecorder
+
+Thread-safe in-memory recorder used by each orchestrator. Public methods:
+`record()`, `get_trace()`, `export_trace()`, `register_exporter()`, `verify()`,
+and `last_event_id()`. `record()` rejects sensitive keys, non-finite numbers,
+unsupported objects, excessive depth, more than 32 keys, and more than 16 KiB
+of serialized attributes. `verify()` checks hashes and sequence as well as
+duplicate IDs, same-trace earlier causes, parent-run integrity, and terminal
+closure for instrumented boundaries.
+
+Applications normally use the orchestrator's trace methods instead of
+constructing a recorder directly.
 
 ---
 
@@ -1101,17 +1204,17 @@ Frozen dataclass.
 
 ## Concurrency
 
-SETT's core components (`UniversalMemory`, `EthicalFilter`, `SETTExecutor`, `PrivateMemory`) are not evaluated under concurrent access, with one documented exception: `UniversalMemory` holds an internal lock around its store and history so that concurrent `update()` / `read()` / `publish_environmental_context()` calls do not corrupt shared state.
+SETT's core components (`UniversalMemory`, `EthicalFilter`, `SETTExecutor`, `PrivateMemory`) are not evaluated under concurrent access, with two documented exceptions: `UniversalMemory` holds an internal lock around its store and history so that concurrent `update()` / `read()` / `publish_environmental_context()` calls do not corrupt shared state, and `TraceRecorder` (see above) holds its own internal `threading.RLock()` around `record()` so that concurrent tracing calls from multiple threads do not lose events or corrupt the hash chain - verified under a stress test of 8 concurrent threads each recording 200 events (1600 events total, zero loss, `verify()` returns `True` afterward).
 
-Outside of that one guarantee, SETT does not currently make a thread-safety claim for the framework as a whole: no adapter, agent base class, or expert base class has been tested under concurrent access, and none advertises being safe for it. This applies to `PrivateMemory`, `EthicalFilter`'s audit log, `SETTExecutor`'s audit log, and the LLM/TTS/STT/sentiment adapters equally.
+Outside of those two guarantees, SETT does not currently make a thread-safety claim for the framework as a whole: no adapter, agent base class, or expert base class has been tested under concurrent access, and none advertises being safe for it. This applies to `PrivateMemory`, `EthicalFilter`'s audit log, `SETTExecutor`'s audit log, and the LLM/TTS/STT/sentiment adapters equally.
 
 Practical implications for a deployment:
 
 - Running multiple `SETTOrchestrator` instances in separate processes or async tasks, each with its own agents, is the supported pattern for parallelism today (this is exactly what `EnvironmentalContext` and `publish_environmental_context()` exist to coordinate across instances).
-- Sharing a single `SETTAgent`, `PrivateMemory`, or `EthicalFilter` instance across multiple threads or concurrent coroutines without external synchronization is not a tested configuration.
+- Sharing a single `SETTAgent`, `PrivateMemory`, or `EthicalFilter` instance across multiple threads or concurrent coroutines without external synchronization is not a tested configuration. `TraceRecorder` is the one exception: it is safe to share and record into from multiple threads.
 - An STT adapter's `transcribe()` being called concurrently for overlapping audio streams is an application-layer concern: guard it in the calling Expert or Agent, not inside the adapter (this mirrors why `STTBase` deliberately does not own a listening loop or a lock itself).
 
-This is a documentation gap being closed, not a new restriction: the underlying behavior has not changed. A future release may extend the same lock-based pattern already used by `UniversalMemory` to other shared components if a real deployment need appears.
+This is a documentation gap being closed, not a new restriction: the underlying behavior has not changed. A future release may extend the same lock-based pattern already used by `UniversalMemory` and `TraceRecorder` to other shared components if a real deployment need appears.
 
 ---
 
@@ -1154,6 +1257,7 @@ code should read these instead of parsing the message string:
 | `e.threshold` | `float \| None` | The effective reject threshold the score was compared against, with environmental modifiers already applied. |
 | `e.principle` | `str \| None` | The ruleset principle in effect. |
 | `e.reasoning` | `str \| None` | The analyzer's reasoning behind the score. |
+| `e.trace_event_id` | `str \| None` | Latest causal event for the rejection while unified tracing is active. |
 
 All attributes default to `None` if the exception is constructed with only
 a message, so existing raising code keeps working unchanged.

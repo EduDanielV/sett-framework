@@ -19,7 +19,7 @@ Usage:
     from sett import SETTOrchestrator, SETTAgent, SETTExpert, EthicalFilter
 """
 
-__version__ = "0.10.1"
+__version__ = "0.11.0"
 __author__ = "Eduardo Daniel Viñales"
 __license__ = "MIT"
 
@@ -30,6 +30,12 @@ from sett.core_ruler.expert import SETTExpert
 from sett.core_ruler.phrasing_expert import PhrasingExpert
 from sett.core_ruler.action import Action
 from sett.core_ruler.executor import SETTExecutor
+from sett.core_ruler.execution_context import (
+    ExecutionContext,
+    TracedResult,
+    current_execution_context,
+)
+from sett.audit_ruler.trace import TraceEvent, TraceRecorder
 from sett.core_ruler.stub_agent import StubDomainAgent
 from sett.core_ruler.pipeline import (
     PipelineStep,
@@ -95,6 +101,11 @@ __all__ = [
     "PhrasingExpert",
     "Action",
     "SETTExecutor",
+    "ExecutionContext",
+    "TracedResult",
+    "current_execution_context",
+    "TraceEvent",
+    "TraceRecorder",
     "StubDomainAgent",
     "PipelineStep",
     "PipelineResult",

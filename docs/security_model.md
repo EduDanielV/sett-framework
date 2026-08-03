@@ -1,4 +1,36 @@
-# SETT v0.8 security and safety model
+# SETT security and safety model
+
+## Execution trace privacy
+
+SETT 0.11 adds causal execution traces without turning the trace into a copy
+of application memory. The default trace contains component names, operation
+types, statuses, reason codes, correlation identifiers, safe counts, risk
+decision fields, and error types. It does not contain input payloads, action
+payloads, handler results, exception messages or locals, prompts, model
+responses, biometric values, risk profiles, or private-memory values.
+
+`ExecutionContext.metadata` accepts only recursively JSON-safe values. It
+rejects sensitive key fragments, framework-reserved keys, non-finite numbers,
+non-string mapping keys, and unsupported objects. It is bounded by key count,
+depth, and serialized size. Optional subject/session identifiers are opaque;
+applications should use pseudonymous values.
+
+`export_trace()` returns defensive sanitized dictionaries. Exporter callbacks
+receive the same defensive representation. Exporters are best-effort for
+diagnostic events, but a failure while exporting the pre-effect
+`handler.authorized` event records `handler.blocked` and blocks the handler.
+`handler.started` therefore means the authorization event was committed and
+exported successfully. SETT does not permit an effect it cannot trace at that
+configured boundary.
+
+Direct `TraceRecorder.record()` calls apply the same recursive constraints:
+attributes are deeply frozen, limited to 32 keys, depth 8, and 16 KiB,
+non-finite numbers and sensitive key fragments are rejected, and unsupported
+objects are never converted with `repr()`.
+
+The recorder's hash chain is tamper-evident, not signed. External append-only
+storage, signatures, access control, retention, and deletion policy remain
+deployment responsibilities.
 
 ## Fail-closed execution
 
@@ -55,7 +87,9 @@ values where practical, but should not rely on mutating a value read from
 
 Each history or audit entry contains a sequence number, the previous entry hash,
 and its own SHA-256 hash. `verify_history()` and `verify_audit_log()` verify the
-chain.
+chain. Unified execution-trace verification additionally rejects duplicate
+event IDs, cross-trace or forward causes, missing/cross-trace parent runs, and
+instrumented starts without exactly one corresponding terminal outcome.
 
 This detects accidental or in-process modification when verification runs. It
 does **not** provide authenticity against an attacker who can rewrite both the

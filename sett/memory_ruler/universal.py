@@ -10,15 +10,22 @@ Also handles EnvironmentalContext: the shared risk state that
 multiple SETT instances in the same location can read and publish.
 """
 from __future__ import annotations
-from typing import Any, TYPE_CHECKING
+
+import threading
 from copy import deepcopy
 from datetime import datetime, timezone
-import threading
+from typing import TYPE_CHECKING, Any
 
 from sett.audit_ruler.chain import append_chained_entry, verify_chain
-from sett.exceptions import SETTConfigurationError
+from sett.core_ruler.execution_context import (
+    ExecutionContext,
+    current_execution_context,
+    current_trace_cause_id,
+)
+from sett.exceptions import SETTConfigurationError, SETTEthicalFilterRejectedError
 
 if TYPE_CHECKING:
+    from sett.audit_ruler.trace import TraceRecorder
     from sett.ethics_ruler.ethic_kernel.filter import EthicalFilter
     from sett.risk_ruler.environmental_context import EnvironmentalContext
     from sett.risk_ruler.risk_profile import RiskProfile
@@ -49,11 +56,16 @@ class UniversalMemory:
         self._store: dict[str, dict[str, Any]] = {}
         self._history: list[dict[str, Any]] = []
         self._ethical_filter: EthicalFilter | None = None
+        self._trace_recorder: TraceRecorder | None = None
         self._lock = threading.Lock()
 
     def set_ethical_filter(self, ethical_filter: EthicalFilter) -> None:
         """Attach an EthicalFilter to intercept all writes."""
         self._ethical_filter = ethical_filter
+
+    def set_trace_recorder(self, recorder: TraceRecorder) -> None:
+        """Attach the orchestrator-owned trace recorder."""
+        self._trace_recorder = recorder
 
     # ── Agent results ────────────────────────────────────────────────────────
 
@@ -62,8 +74,11 @@ class UniversalMemory:
         agent: str,
         result: dict[str, Any],
         emotional_state: str = "unknown",
-        risk_profile: "RiskProfile | None" = None,
-        environmental_context: "EnvironmentalContext | None" = None,
+        risk_profile: RiskProfile | None = None,
+        environmental_context: EnvironmentalContext | None = None,
+        *,
+        execution_context: ExecutionContext | None = None,
+        cause_id: str | None = None,
     ) -> None:
         """
         Called by an agent to publish its final result.
@@ -83,16 +98,56 @@ class UniversalMemory:
         The publishing agent's domain is still available, namespaced as
         "_source_agent" to avoid colliding with the agent's own data.
         """
+        trace_context = execution_context or current_execution_context()
+        trace_cause = cause_id or current_trace_cause_id()
+        proposed_event = None
+        if trace_context is not None and self._trace_recorder is not None:
+            proposed_event = self._trace_recorder.record(
+                trace_context,
+                kind="memory.publication_proposed",
+                component_type="universal_memory",
+                component_name=agent,
+                status="proposed",
+                cause_id=trace_cause,
+                reason_codes=("memory.publication",),
+                attributes={"agent": agent, "field_count": len(result)},
+            )
+
+        policy_event = None
         if self._ethical_filter is not None:
             context = dict(result)
             context["_source_agent"] = agent
-            self._ethical_filter.evaluate(
-                action="memory_write",
-                context=context,
-                emotional_state=emotional_state,
-                risk_profile=risk_profile,
-                environmental_context=environmental_context,
-            )
+            try:
+                _, policy_event = self._ethical_filter._evaluate_with_trace(
+                    action="memory_write",
+                    context=context,
+                    emotional_state=emotional_state,
+                    risk_profile=risk_profile,
+                    environmental_context=environmental_context,
+                    execution_context=trace_context,
+                    cause_id=(
+                        proposed_event.event_id if proposed_event else trace_cause
+                    ),
+                )
+            except SETTEthicalFilterRejectedError as error:
+                if trace_context is not None and self._trace_recorder is not None:
+                    rejected_event = self._trace_recorder.record(
+                        trace_context,
+                        kind="memory.publication_rejected",
+                        component_type="universal_memory",
+                        component_name=agent,
+                        status="rejected",
+                        cause_id=(
+                            error.trace_event_id
+                            or (
+                                proposed_event.event_id
+                                if proposed_event else trace_cause
+                            )
+                        ),
+                        reason_codes=("policy.reject",),
+                    )
+                    error.trace_event_id = rejected_event.event_id
+                raise
 
         safe_result = deepcopy(result)
         with self._lock:
@@ -102,15 +157,36 @@ class UniversalMemory:
                 "agent": agent,
                 "action": "update",
             })
+        if trace_context is not None and self._trace_recorder is not None:
+            self._trace_recorder.record(
+                trace_context,
+                kind="memory.publication_committed",
+                component_type="universal_memory",
+                component_name=agent,
+                status="completed",
+                cause_id=(
+                    policy_event.event_id
+                    if self._ethical_filter is not None
+                    and policy_event is not None
+                    else (
+                        proposed_event.event_id if proposed_event else trace_cause
+                    )
+                ),
+                reason_codes=("memory.publication",),
+                attributes={"agent": agent, "field_count": len(result)},
+            )
 
     def evaluate_action(
         self,
         action: str,
         context: dict[str, Any],
         emotional_state: str = "unknown",
-        risk_profile: "RiskProfile | None" = None,
-        environmental_context: "EnvironmentalContext | None" = None,
-    ) -> None:
+        risk_profile: RiskProfile | None = None,
+        environmental_context: EnvironmentalContext | None = None,
+        *,
+        execution_context: ExecutionContext | None = None,
+        cause_id: str | None = None,
+    ) -> Any:
         """
         Evaluate a real-world side effect through the EthicalFilter BEFORE
         it is executed: used by SETTAgent.propose_action() and by
@@ -128,12 +204,43 @@ class UniversalMemory:
                 "Attach this UniversalMemory to a SETTOrchestrator or call "
                 "set_ethical_filter() before proposing actions."
             )
-        self._ethical_filter.evaluate(
+        verdict, _ = self._evaluate_action_with_trace(
+            action=action,
+            context=context,
+            emotional_state=emotional_state,
+            risk_profile=risk_profile,
+            environmental_context=environmental_context,
+            execution_context=execution_context,
+            cause_id=cause_id,
+        )
+        return verdict
+
+    def _evaluate_action_with_trace(
+        self,
+        action: str,
+        context: dict[str, Any],
+        emotional_state: str = "unknown",
+        risk_profile: RiskProfile | None = None,
+        environmental_context: EnvironmentalContext | None = None,
+        *,
+        execution_context: ExecutionContext | None = None,
+        cause_id: str | None = None,
+    ) -> tuple[Any, Any]:
+        """Internal action evaluation returning its exact policy event."""
+        if self._ethical_filter is None:
+            raise SETTConfigurationError(
+                "Cannot evaluate a real-world action without an EthicalFilter. "
+                "Attach this UniversalMemory to a SETTOrchestrator or call "
+                "set_ethical_filter() before proposing actions."
+            )
+        return self._ethical_filter._evaluate_with_trace(
             action=action,
             context=deepcopy(context),
             emotional_state=emotional_state,
             risk_profile=risk_profile,
             environmental_context=environmental_context,
+            execution_context=execution_context or current_execution_context(),
+            cause_id=cause_id or current_trace_cause_id(),
         )
 
     def read(self, agent: str, default: Any = None) -> Any:
@@ -152,7 +259,7 @@ class UniversalMemory:
     # ── Environmental context (multi-instance coordination) ──────────────────
 
     def publish_environmental_context(
-        self, context: "EnvironmentalContext"
+        self, context: EnvironmentalContext
     ) -> None:
         """
         Publish an EnvironmentalContext to a shared location slot.
@@ -176,7 +283,7 @@ class UniversalMemory:
 
     def read_environmental_context(
         self, location_id: str = "global"
-    ) -> "EnvironmentalContext | None":
+    ) -> EnvironmentalContext | None:
         """
         Read the current EnvironmentalContext for a location.
 
@@ -195,7 +302,7 @@ class UniversalMemory:
 
     def read_all_environmental_contexts(
         self,
-    ) -> dict[str, "EnvironmentalContext"]:
+    ) -> dict[str, EnvironmentalContext]:
         """Return all published EnvironmentalContexts, keyed by location_id."""
         from sett.risk_ruler.environmental_context import EnvironmentalContext
         result = {}

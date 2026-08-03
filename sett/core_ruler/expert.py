@@ -10,10 +10,20 @@ and returns a result that the agent uses to compose its final output.
 Several experts form one agent: that is the core of the SETT hierarchy.
 """
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from collections.abc import Callable
+from functools import wraps
 from typing import TYPE_CHECKING, Any
 
+from sett.core_ruler.execution_context import (
+    current_execution_context,
+    current_trace_cause_id,
+    execution_scope,
+)
+
 if TYPE_CHECKING:
+    from sett.audit_ruler.trace import TraceRecorder
     from sett.memory_ruler.private import PrivateMemory
 
 
@@ -48,6 +58,8 @@ class SETTExpert(ABC):
         """
         self.name = name
         self._private_memory: PrivateMemory | None = None
+        self._trace_recorder: TraceRecorder | None = None
+        self._sett_trace_wrapped = False
 
     def attach_memory(self, memory: PrivateMemory) -> None:
         """
@@ -56,6 +68,81 @@ class SETTExpert(ABC):
         Do not call this manually.
         """
         self._private_memory = memory
+
+    def _attach_trace_recorder(self, recorder: TraceRecorder) -> None:
+        """Attach run-local tracing when the parent agent is registered."""
+        self._trace_recorder = recorder
+
+    def _install_trace_interceptor(self) -> None:
+        """Instrument the existing public resolve() method once.
+
+        The wrapper is attached to this instance, preserving subclasses'
+        public ``resolve(context)`` contract and class-level method identity.
+        """
+        if self._sett_trace_wrapped:
+            return
+        implementation = self.resolve
+
+        @wraps(implementation)
+        def traced_resolve(context: dict[str, Any]) -> dict[str, Any]:
+            return self._resolve_with_trace(implementation, context)
+
+        self.resolve = traced_resolve  # type: ignore[method-assign]
+        self._sett_trace_wrapped = True
+
+    def _resolve_with_trace(
+        self,
+        implementation: Callable[[dict[str, Any]], dict[str, Any]],
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        parent = current_execution_context()
+        recorder = self._trace_recorder
+        if parent is None or recorder is None:
+            return implementation(context)
+
+        child = parent.derive()
+        started = recorder.record(
+            child,
+            kind="expert.started",
+            component_type="expert",
+            component_name=self.name,
+            status="started",
+            cause_id=current_trace_cause_id(),
+        )
+        with execution_scope(child, started.event_id):
+            try:
+                result = implementation(context)
+            except Exception as error:
+                failed_event = recorder.record(
+                    child,
+                    kind="expert.failed",
+                    component_type="expert",
+                    component_name=self.name,
+                    status="failed",
+                    cause_id=started.event_id,
+                    reason_codes=("component.exception",),
+                    attributes={"error_type": type(error).__name__},
+                )
+                try:
+                    error.trace_event_id = failed_event.event_id
+                except (AttributeError, TypeError):
+                    pass
+                raise
+            recorder.record(
+                child,
+                kind="expert.completed",
+                component_type="expert",
+                component_name=self.name,
+                status="completed",
+                cause_id=started.event_id,
+                attributes={"result_type": type(result).__name__},
+            )
+            return result
+
+    @property
+    def _execution_context(self):
+        """Context active while this expert is resolving, if any."""
+        return current_execution_context()
 
     @abstractmethod
     def resolve(self, context: dict[str, Any]) -> dict[str, Any]:
@@ -73,7 +160,6 @@ class SETTExpert(ABC):
             A dict with the result of this expert's work.
             This will be used by the agent to compose its final output.
         """
-        pass
 
     def __repr__(self) -> str:
         return f"SETTExpert(name={self.name!r})"

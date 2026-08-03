@@ -36,17 +36,23 @@ quick/low-stakes effects, submit_action() for the ones where "the
 developer forgot to gate it" is not an acceptable failure mode.
 """
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from sett.core_ruler.execution_context import (
+    current_execution_context,
+    current_trace_cause_id,
+)
 from sett.core_ruler.expert import SETTExpert
+from sett.exceptions import SETTConfigurationError, SETTExpertNotFoundError
 from sett.memory_ruler.private import PrivateMemory
-from sett.exceptions import SETTExpertNotFoundError, SETTConfigurationError
 
 if TYPE_CHECKING:
+    from sett.audit_ruler.trace import TraceRecorder
+    from sett.core_ruler.executor import SETTExecutor
     from sett.memory_ruler.universal import UniversalMemory
     from sett.risk_ruler.risk_profile import RiskProfile
-    from sett.core_ruler.executor import SETTExecutor
 
 
 class SETTAgent(ABC):
@@ -107,7 +113,8 @@ class SETTAgent(ABC):
         # was registered. None means no Executor is configured: in that
         # case submit_action() raises SETTConfigurationError, since a
         # missing Executor should fail closed, not silently no-op.
-        self._executor: "SETTExecutor | None" = None
+        self._executor: SETTExecutor | None = None
+        self._trace_recorder: TraceRecorder | None = None
 
     def register_expert(self, expert: SETTExpert) -> None:
         """
@@ -118,7 +125,16 @@ class SETTAgent(ABC):
             expert: A SETTExpert instance. Its name must be unique within this agent.
         """
         expert.attach_memory(self._private_memory)
+        expert._install_trace_interceptor()
+        if self._trace_recorder is not None:
+            expert._attach_trace_recorder(self._trace_recorder)
         self._experts[expert.name] = expert
+
+    def attach_trace_recorder(self, recorder: TraceRecorder) -> None:
+        """Called by the orchestrator to connect causal tracing."""
+        self._trace_recorder = recorder
+        for expert in self._experts.values():
+            expert._attach_trace_recorder(recorder)
 
     def attach_universal_memory(self, memory: UniversalMemory) -> None:
         """
@@ -128,7 +144,7 @@ class SETTAgent(ABC):
         """
         self._universal_memory = memory
 
-    def attach_executor(self, executor: "SETTExecutor") -> None:
+    def attach_executor(self, executor: SETTExecutor) -> None:
         """
         Called by the orchestrator when a SETTExecutor is registered.
         Connects this agent to it so submit_action() can be used.
@@ -159,7 +175,7 @@ class SETTAgent(ABC):
     def _publish_to_universal(
         self,
         result: dict[str, Any],
-        risk_profile: "RiskProfile | None" = None,
+        risk_profile: RiskProfile | None = None,
     ) -> None:
         """
         Publish the agent's final result to universal memory.
@@ -194,13 +210,15 @@ class SETTAgent(ABC):
             emotional_state=self._current_emotional_state,
             risk_profile=risk_profile,
             environmental_context=environmental_context,
+            execution_context=current_execution_context(),
+            cause_id=current_trace_cause_id(),
         )
 
     def propose_action(
         self,
         action: str,
         action_context: dict[str, Any] | None = None,
-        risk_profile: "RiskProfile | None" = None,
+        risk_profile: RiskProfile | None = None,
     ) -> None:
         """
         Gate a real-world side effect through the EthicalFilter BEFORE it
@@ -241,13 +259,15 @@ class SETTAgent(ABC):
             emotional_state=self._current_emotional_state,
             risk_profile=risk_profile,
             environmental_context=environmental_context,
+            execution_context=current_execution_context(),
+            cause_id=current_trace_cause_id(),
         )
 
     def submit_action(
         self,
         action_type: str,
         payload: dict[str, Any] | None = None,
-        risk_profile: "RiskProfile | None" = None,
+        risk_profile: RiskProfile | None = None,
     ) -> Any:
         """
         Submit a real-world side effect as data (an Action) to the
@@ -300,6 +320,8 @@ class SETTAgent(ABC):
             emotional_state=self._current_emotional_state,
             risk_profile=risk_profile,
             location_id=self._current_location_id,
+            execution_context=current_execution_context(),
+            cause_id=current_trace_cause_id(),
         )
 
     @abstractmethod
@@ -316,12 +338,16 @@ class SETTAgent(ABC):
         Returns:
             The final synthesized result of this agent's work.
         """
-        pass
 
     @property
     def experts(self) -> list[str]:
         """Names of all registered experts."""
         return list(self._experts.keys())
+
+    @property
+    def _execution_context(self):
+        """Context active while this agent is processing, if any."""
+        return current_execution_context()
 
     def __repr__(self) -> str:
         return (

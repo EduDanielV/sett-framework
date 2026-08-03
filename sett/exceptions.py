@@ -9,7 +9,6 @@ descriptive error rather than a generic Python exception.
 
 class SETTError(Exception):
     """Base exception for all SETT framework errors."""
-    pass
 
 
 class SETTEthicalFilterRejectedError(SETTError):
@@ -29,6 +28,8 @@ class SETTEthicalFilterRejectedError(SETTError):
             applied).
         principle (str | None): The ruleset principle in effect.
         reasoning (str | None): The analyzer's reasoning for the score.
+        trace_event_id (str | None): The latest causal trace event associated
+            with the rejection, when tracing is active.
 
     All attributes default to ``None``, so code that raises this
     exception with only a message keeps working unchanged.
@@ -43,6 +44,7 @@ class SETTEthicalFilterRejectedError(SETTError):
         threshold: float | None = None,
         principle: str | None = None,
         reasoning: str | None = None,
+        trace_event_id: str | None = None,
     ) -> None:
         super().__init__(message)
         self.action = action
@@ -50,6 +52,7 @@ class SETTEthicalFilterRejectedError(SETTError):
         self.threshold = threshold
         self.principle = principle
         self.reasoning = reasoning
+        self.trace_event_id = trace_event_id
 
 
 class SETTEthicalFilterWarningError(SETTError):
@@ -57,7 +60,6 @@ class SETTEthicalFilterWarningError(SETTError):
     Raised when the EthicalFilter issues a warning about an action.
     The action is allowed but flagged for review.
     """
-    pass
 
 
 class SETTMemoryAccessDeniedError(SETTError):
@@ -65,7 +67,6 @@ class SETTMemoryAccessDeniedError(SETTError):
     Raised when an entity tries to access memory it has no permission to.
     Example: the orchestrator trying to read an agent's PrivateMemory.
     """
-    pass
 
 
 class SETTAgentNotFoundError(SETTError):
@@ -73,21 +74,18 @@ class SETTAgentNotFoundError(SETTError):
     Raised when the orchestrator cannot find a registered agent
     for the requested domain.
     """
-    pass
 
 
 class SETTExpertNotFoundError(SETTError):
     """
     Raised when an agent cannot find a registered expert by name.
     """
-    pass
 
 
 class SETTLLMAdapterError(SETTError):
     """
     Raised when an LLM adapter fails to respond or is misconfigured.
     """
-    pass
 
 
 class SETTServiceAdapterError(SETTError):
@@ -95,7 +93,6 @@ class SETTServiceAdapterError(SETTError):
     Raised when a TTS, STT, sentiment, or generative AI adapter fails
     or is misconfigured.
     """
-    pass
 
 
 class SETTConfigurationError(SETTError):
@@ -103,7 +100,6 @@ class SETTConfigurationError(SETTError):
     Raised when the framework or any of its components is incorrectly configured
     before the system starts running.
     """
-    pass
 
 
 class SETTValidationError(SETTError, ValueError):
@@ -118,4 +114,3 @@ class SETTValidationError(SETTError, ValueError):
     idiom for constructor validation (`except ValueError`) both catch
     the same exception: neither has to know about the other.
     """
-    pass

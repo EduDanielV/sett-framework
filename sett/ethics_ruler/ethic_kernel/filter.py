@@ -12,21 +12,30 @@ Every action and every UniversalMemory write passes through here.
 The filter always prioritizes human protection.
 """
 from __future__ import annotations
-from enum import Enum
-from typing import Any, TYPE_CHECKING
+
+import logging
 from copy import deepcopy
 from datetime import datetime, timezone
-import logging
+from enum import Enum
+from typing import TYPE_CHECKING, Any
 
 from sett.audit_ruler.chain import append_chained_entry, verify_chain
-
+from sett.core_ruler.execution_context import (
+    ExecutionContext,
+    current_execution_context,
+    current_trace_cause_id,
+)
+from sett.ethics_ruler.ethic_kernel.context_analyzer import (
+    ContextAnalysis,
+    ContextAnalyzer,
+)
 from sett.ethics_ruler.ethic_kernel.rules import EthicalRuleset, default_ruleset
-from sett.ethics_ruler.ethic_kernel.context_analyzer import ContextAnalyzer, ContextAnalysis
 from sett.exceptions import SETTEthicalFilterRejectedError
 
 if TYPE_CHECKING:
-    from sett.risk_ruler.risk_profile import RiskProfile
+    from sett.audit_ruler.trace import TraceEvent, TraceRecorder
     from sett.risk_ruler.environmental_context import EnvironmentalContext
+    from sett.risk_ruler.risk_profile import RiskProfile
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +65,11 @@ class EthicalFilter:
         self._context_analyzer = context_analyzer or ContextAnalyzer()
         self._analyzers_by_action_type: dict[str, ContextAnalyzer] = {}
         self._audit_log: list[dict[str, Any]] = []
+        self._trace_recorder: TraceRecorder | None = None
+
+    def set_trace_recorder(self, recorder: TraceRecorder) -> None:
+        """Attach the orchestrator-owned recorder for policy events."""
+        self._trace_recorder = recorder
 
     def register_analyzer(self, action_type: str, analyzer: ContextAnalyzer) -> None:
         """
@@ -103,9 +117,35 @@ class EthicalFilter:
         action: str,
         context: dict[str, Any],
         emotional_state: str = "unknown",
-        risk_profile: "RiskProfile | None" = None,
-        environmental_context: "EnvironmentalContext | None" = None,
+        risk_profile: RiskProfile | None = None,
+        environmental_context: EnvironmentalContext | None = None,
+        *,
+        execution_context: ExecutionContext | None = None,
+        cause_id: str | None = None,
     ) -> FilterVerdict:
+        """Evaluate and preserve the established verdict-only API."""
+        verdict, _ = self._evaluate_with_trace(
+            action=action,
+            context=context,
+            emotional_state=emotional_state,
+            risk_profile=risk_profile,
+            environmental_context=environmental_context,
+            execution_context=execution_context,
+            cause_id=cause_id,
+        )
+        return verdict
+
+    def _evaluate_with_trace(
+        self,
+        action: str,
+        context: dict[str, Any],
+        emotional_state: str = "unknown",
+        risk_profile: RiskProfile | None = None,
+        environmental_context: EnvironmentalContext | None = None,
+        *,
+        execution_context: ExecutionContext | None = None,
+        cause_id: str | None = None,
+    ) -> tuple[FilterVerdict, TraceEvent | None]:
         """
         Evaluate an action through the three-layer system.
 
@@ -179,6 +219,40 @@ class EthicalFilter:
             decision_reason_codes,
         )
 
+        trace_context = execution_context or current_execution_context()
+        policy_event = None
+        if trace_context is not None and self._trace_recorder is not None:
+            reason_codes = list(decision_reason_codes)
+            reason_codes.append(f"policy.{verdict.value}")
+            policy_event = self._trace_recorder.record(
+                trace_context,
+                kind="policy.evaluated",
+                component_type="ethical_filter",
+                component_name=self.__class__.__name__,
+                status=verdict.value,
+                cause_id=cause_id or current_trace_cause_id(),
+                reason_codes=tuple(reason_codes),
+                attributes={
+                    "action": action,
+                    "verdict": verdict.value,
+                    "harm_score": round(score, 4),
+                    "effective_reject_threshold": effective_reject,
+                    "effective_warn_threshold": effective_warn,
+                    "situation_urgency": round(
+                        analysis.safety_assessment.situation_urgency, 4
+                    ),
+                    "action_harm_risk": round(
+                        analysis.safety_assessment.action_harm_risk, 4
+                    ),
+                    "omission_risk": round(
+                        analysis.safety_assessment.omission_risk, 4
+                    ),
+                    "protective_action": (
+                        analysis.safety_assessment.protective_action
+                    ),
+                },
+            )
+
         # Act on verdict
         if verdict == FilterVerdict.WARN:
             logger.warning(
@@ -203,9 +277,12 @@ class EthicalFilter:
                 threshold=effective_reject,
                 principle=self._ruleset.principle,
                 reasoning=analysis.reasoning,
+                trace_event_id=(
+                    policy_event.event_id if policy_event is not None else None
+                ),
             )
 
-        return verdict
+        return verdict, policy_event
 
     def _log(
         self,

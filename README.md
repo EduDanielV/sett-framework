@@ -6,28 +6,20 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.21287133-blue)](https://doi.org/10.5281/zenodo.21287133)
 
-**Current source release: 0.10.1**: four documentation/consistency fixes,
-all found and fixed the same day, squashed into one release since none
-had been published individually. `docs/security_model.md` still claimed
-`PrivateMemory` "intentionally retains normal Python object identity",
-false since 0.9.0's `read()`/`get_all()` deep-copy change - found by an
-independent installation/upgrade validation exercise. A Spanish paragraph
-had been locally introduced into `sett/services_tts_stt/base.py`'s
-docstring after v0.7.0's actual release (confirmed against the real
-published source, not present there) - removed, along with five Spanish
-example strings elsewhere translated to English. `docs/SETT_Conventions_v2.md`,
-the framework's own conventions document, published for the first time -
-cited from source since v0.7.0 but never actually shipped, it only
-existed as a private working note; every citing site updated to the new
-name and to English. Finally, a new guard test,
-`tests/test_no_spanish_in_public_tree.py`, now catches this same class of
-leak automatically going forward (same spirit as
-`test_no_internal_project_names.py`; not a grammar-aware classifier, so
-manual review before a release still matters). No code logic changed, no
-public API changed. 290 tests (up from 280). See
-[`CHANGELOG.md`](CHANGELOG.md) for the full entry.
+**Current source release: 0.11.0** introduces immutable, derivable
+`ExecutionContext` objects and complete causal tracing across routing,
+agents, experts, pipelines, governed memory publication, policy decisions,
+actions, handlers, results, rejections, and errors. Existing
+`process(input_data)` and `resolve(context)` implementations continue to
+work unchanged. Traces are tamper-evident, exportable through sanitized
+views, and never inspect private-memory values or record application
+payloads by default. A real-world handler is blocked if its pre-effect trace
+event cannot be delivered to a configured exporter. See
+[`MIGRATION_v0.11.md`](MIGRATION_v0.11.md) and
+[`CHANGELOG.md`](CHANGELOG.md).
 
-Before that, 0.10.0: `PhrasingExpert` gained a fourth,
+Before that, 0.10.1 hardened documentation and public-tree consistency,
+and 0.10.0 added a fourth,
 optional hook, `verify_facts(phrased, facts, context)`, for validating
 already-phrased text against known facts and swapping it out if it
 contradicts them - motivated by two independent downstream subclasses that

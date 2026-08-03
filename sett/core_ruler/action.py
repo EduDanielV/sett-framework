@@ -15,9 +15,11 @@ the expert physically has no reference to the real client (Twilio,
 an email SDK, a payment API). It can only describe intent.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any
 from datetime import datetime, timezone
+from typing import Any
+from uuid import uuid4
 
 
 @dataclass
@@ -42,6 +44,7 @@ class Action:
     timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    action_id: str = field(default_factory=lambda: str(uuid4()))
 
     def __repr__(self) -> str:
         return (

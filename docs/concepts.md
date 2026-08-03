@@ -70,6 +70,26 @@ The orchestrator cannot modify universal memory directly, but it can audit it an
 
 ---
 
+## Execution identity and causal traces
+
+An `ExecutionContext` identifies one node in a run without carrying application
+state. `trace_id` groups the complete causal tree, `run_id` identifies one
+component invocation, and `parent_id` links a child invocation to its parent.
+Derived contexts preserve the trace and create a new run identity.
+
+The orchestrator records structured events around framework boundaries. Event
+`cause_id` links a publication to its policy decision, an approved action to
+that decision, and a handler result to the handler start. This provides
+operational reconstruction without exposing private reasoning or copying raw
+payloads into logs.
+
+Context propagation is explicit at orchestrator entry points and run-local
+inside existing application-owned `process()` and `resolve()` methods.
+`ContextVar` isolation prevents one thread or asynchronous task from reading
+another run's active context, and scoped tokens are reset after every call.
+
+---
+
 ## The hybrid risk system
 
 SETT evaluates risk across three independent layers that work together to give the EthicalFilter a complete picture before any action is executed. The first layer applies to both the action and the system itself; the other two apply to the user and to the environment.

@@ -77,6 +77,40 @@ print(result["greeting"])
 # Hello, Dan! Welcome to SETT.
 ```
 
+Every orchestrated call now creates a trace automatically. Existing code does
+not need to pass a context:
+
+```python
+trace_id = orchestrator.last_trace_id
+for event in orchestrator.export_trace(trace_id, view="summary"):
+    print(event["kind"], event["status"])
+```
+
+For request boundaries that already have correlation identifiers, create and
+pass an explicit context:
+
+```python
+from sett import ExecutionContext
+
+context = ExecutionContext.create(
+    application_id="welcome-demo",
+    session_id="opaque-session-id",
+    metadata={"channel": "cli"},
+)
+traced = orchestrator.process_traced(
+    {"name": "Dan"},
+    domain="welcome",
+    execution_context=context,
+)
+
+assert traced.trace_id == context.trace_id
+assert orchestrator.verify_traces(traced.trace_id)
+```
+
+Do not put secrets, payloads, prompts, or user records in context metadata.
+Use opaque pseudonymous identifiers and keep domain data in normal inputs and
+memory.
+
 ---
 
 ## What just happened
